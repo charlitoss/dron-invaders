@@ -41,7 +41,7 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 .table canvas{width:calc(27px*var(--s));height:calc(21px*var(--s));image-rendering:pixelated}
 .table .pts{text-align:right;color:var(--white)}
 .table .dive{text-align:left;color:var(--grey)}
-.board{grid-template-columns:auto auto auto}
+.board{grid-template-columns:auto auto auto auto}
 .board .pos{text-align:right;color:var(--grey)}
 .board .nm{text-align:left;color:var(--yellow);letter-spacing:.1em}
 .board .me{color:var(--celeste)}
@@ -320,15 +320,17 @@ function api(opts){return fetch('api/scores',opts).then(r=>{if(!r.ok)throw new E
 function fillBoard(el,n,meRank){
   el.querySelectorAll(':scope>:not(.cap)').forEach(x=>x.remove());
   top.slice(0,n).forEach((e,i)=>{
+    // drone by position: flagship for 1st, then down the ranks
+    const ship=document.createElement('canvas');ship.width=9;ship.height=7;ship.getContext('2d').drawImage(SPR[RANK_SHIP[Math.min(i,3)]][0],0,0);
     const cells=[['pos',(i+1)+'.'],['nm',e.name],['pts',String(e.score).padStart(6,'0')]].map(([c,t])=>{const x=document.createElement('span');x.className=c+(i+1===meRank?' me':'');x.textContent=t;return x});
-    el.append(...cells);
+    el.append(ship,...cells);
   });
   el.hidden=!top.length;
 }
-function setTop(t){top=t;topReady=true;fillBoard(topSplash,5)}
+const RANK_SHIP=['yellow','purple','red','blue'];
+// title screen: the top 5 replaces the points table once there are scores
+function setTop(t){top=t;topReady=true;fillBoard(topSplash,5);tbl.hidden=top.length>0}
 function loadTop(){api().then(d=>setTop(d.top)).catch(()=>{})}
-// title screen alternates the points table with the top 5, like an arcade attract mode
-setInterval(()=>{if(state!=='title'||!top.length)return;const showTop=topSplash.hidden;topSplash.hidden=!showTop;tbl.hidden=showTop},5000);
 function showGameOverBoard(){
   submitted=false;fillBoard(topOver,10);
   nameForm.hidden=!qualifies(score);
