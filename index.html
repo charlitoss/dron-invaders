@@ -89,7 +89,7 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
       <span class="kicker">FINAL DEL PARTIDO</span>
       <h1>GAME OVER</h1>
       <div class="score-big" id="oScore">0</div>
-      <p id="oBest">RÉCORD 0</p>
+      <p id="oBest">RECORD 0</p>
       <button class="btn" id="btnAgain">REVANCHA</button>
     </div>
   </div>
@@ -301,7 +301,7 @@ function hitPlayer(){
 function gameOver(){
   setState('over');saveBest();
   document.getElementById('oScore').textContent=score;
-  document.getElementById('oBest').textContent='RÉCORD '+best;
+  document.getElementById('oBest').textContent='RECORD '+best;
   ovOver.hidden=false;document.getElementById('btnAgain').focus();
 }
 
@@ -382,18 +382,30 @@ function render(){
   const bf=Math.floor(time*10)%2;for(const b of bombs)spr(BOMB[bf],b.x,b.y,2);
   for(const s of shots)spr(BALL,s.x,s.y);
   if(player.alive&&!(player.inv>0&&Math.floor(time*12)%2))spr(SHIP,player.x,PY,2);
-  // HUD
+  // HUD: 1UP · RECORD · VIDAS · NIVEL (no É in the pixel font) — red labels with values underneath
   ctx.textBaseline='top';
-  txt('1UP',16,10,'#ff2a2a');txt(String(score).padStart(6,'0'),16,22,'#f4f4f4');
-  txt('RÉCORD',W/2,10,'#ff2a2a','center');txt(String(Math.max(best,score)).padStart(6,'0'),W/2,22,'#f4f4f4','center');
-  const olaX=W-16-(state==='play'?hudRightGap:0);
-  txt('OLA',olaX,10,'#ff2a2a','right');txt(String(wave),olaX,22,'#f4f4f4','right');
+  const tw=t=>ctx.measureText(t).width;
+  const inGame=state==='play'||state==='paused';
+  const left=16,right=W-16-(state==='play'?hudRightGap:0);
+  const wScore=Math.max(tw('1UP'),tw('000000')),wRec=Math.max(tw('RECORD'),tw('000000'));
+  const wLives=Math.max(tw('VIDAS'),3*13-2),wLvl=Math.max(tw('NIVEL'),tw(String(wave)));
+  // wide screens: score left, record centred, lives + level grouped on the right;
+  // narrow screens (no room to centre the record): all four spread evenly
+  let livesX=right-wLvl-20-wLives,recC=W/2;
+  if(recC-wRec/2<left+wScore+20||recC+wRec/2>livesX-20){
+    const gap=(right-left-wScore-wRec-wLives-wLvl)/3;
+    recC=left+wScore+gap+wRec/2;livesX=recC+wRec/2+gap;
+  }
+  txt('1UP',left,10,'#ff2a2a');txt(String(score).padStart(6,'0'),left,22,'#f4f4f4');
+  txt('RECORD',recC,10,'#ff2a2a','center');txt(String(Math.max(best,score)).padStart(6,'0'),recC,22,'#f4f4f4','center');
+  txt('VIDAS',livesX+wLives/2,10,'#ff2a2a','center');
+  if(inGame)for(let i=0;i<lives;i++)spr(SHIP,livesX+wLives/2+(i-(lives-1)/2)*13,27);
+  txt('NIVEL',right,10,'#ff2a2a','right');txt(String(wave),right,22,'#f4f4f4','right');
   if(state==='play'){
-    for(let i=0;i<Math.max(0,lives-(player.alive?1:0));i++)spr(SHIP,20+i*16,H-12);
     for(let i=0;i<Math.min(wave,10);i++)spr(FLAG,W-14-i*8,H-12);
     if(banner>0&&Math.floor(time*4)%2===0){
       ctx.textBaseline='middle';
-      txt('OLA '+wave,W/2,330,'#ffd800','center');
+      txt('NIVEL '+wave,W/2,330,'#ffd800','center');
       txt(wave===1?'¡DESPEGAN LOS DRONES!':'¡MÁS RÁPIDO!',W/2,350,'#6fc3ff','center');
     }
   }
