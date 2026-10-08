@@ -36,6 +36,11 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 .hint-touch,.hint-mouse{display:none}
 @media (pointer:coarse){.hint-touch{display:inline}}
 @media (pointer:fine),(pointer:none){.hint-mouse{display:inline}}
+.table{display:grid;grid-template-columns:auto auto auto;gap:calc(6px*var(--s)) calc(14px*var(--s));align-items:center;font-size:calc(9px*var(--s));font-variant-numeric:tabular-nums}
+.table .cap{grid-column:1/-1;color:var(--red);font-size:calc(8px*var(--s));margin-bottom:2px}
+.table canvas{width:calc(27px*var(--s));height:calc(21px*var(--s));image-rendering:pixelated}
+.table .pts{text-align:right;color:var(--white)}
+.table .dive{text-align:left;color:var(--grey)}
 /* the pixel font has no arrow glyphs: draw them on its 8x8 grid so they match the text */
 .key{display:inline-block;width:1em;height:1em;vertical-align:baseline;fill:currentColor;shape-rendering:crispEdges}
 .key.right{transform:scaleX(-1)}
@@ -72,6 +77,9 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
     <div class="overlay" id="ovStart">
       <h1>DRON<br>INVADERS</h1>
       <p>Destruí los drones para que Messi esté contento.</p>
+      <div class="table" id="ptsTable">
+        <span class="cap">TABLA DE PUNTOS</span>
+      </div>
       <button class="btn" id="btnStart">JUGAR</button>
       <p class="hint"><span class="hint-touch">Tocá y arrastrá: dispara solo.</span><span class="hint-mouse">Mouse o <svg class="key" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> <svg class="key right" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> para moverte.<br>Click o ESPACIO para disparar.<br>M: música.</span></p>
     </div>
@@ -156,6 +164,15 @@ const BOMB=[pix([".w.","www","wyw","wyw",".y.",".r."],{w:'#f4f4f4',y:'#ffd800',r
             pix([".w.","www","wyw","wyw",".r.",".y."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'})];
 const BALL=pix([".www.","wwkww","wkkkw","wwkww",".www."],{w:'#f4f4f4',k:'#111111'});
 const FLAG=pix(["pcccc","pwwyw","pcccc","p....","p...."],{p:'#8a8a96',c:'#6fc3ff',w:'#f4f4f4',y:'#ffd800'});
+
+/* points table on the title screen */
+const tbl=document.getElementById('ptsTable');
+['yellow','purple','red','blue'].forEach(k=>{
+  const c=document.createElement('canvas');c.width=9;c.height=7;c.getContext('2d').drawImage(SPR[k][0],0,0);
+  const p=document.createElement('span');p.className='pts';p.textContent=PTS[k];
+  const d=document.createElement('span');d.className='dive';d.textContent=`${PTS[k]*2} EN PICADA`;
+  tbl.append(c,p,d);
+});
 
 /* ---------- Stadium backdrop: 8-bit, drawn on a 3px pixel grid ---------- */
 const PX=3,LH=Math.ceil(H/PX);
