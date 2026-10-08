@@ -75,6 +75,7 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 .sound svg{width:calc(16px*var(--s));height:calc(16px*var(--s));fill:var(--celeste);shape-rendering:crispEdges}
 .sound .off,.sound[aria-pressed="true"] .on{display:none}
 .sound[aria-pressed="true"] .off{display:inline}
+.cameo{position:absolute;z-index:1;top:calc(46px*var(--s));right:calc(8px*var(--s));width:calc(72px*var(--s));height:calc(72px*var(--s));border:2px solid var(--yellow);box-shadow:3px 3px 0 var(--red);image-rendering:pixelated;pointer-events:none}
 .score-big{font-size:calc(28px*var(--s));color:var(--white);line-height:1;font-variant-numeric:tabular-nums}
 </style>
 </head>
@@ -96,6 +97,7 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
       <p class="hint"><span class="hint-touch">Tocá y arrastrá: dispara solo.</span><span class="hint-mouse">Mouse o <svg class="key" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> <svg class="key right" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> para moverte.<br>Click o ESPACIO para disparar.<br>M: música.</span></p>
     </div>
     <button class="sound" id="btnSound" aria-label="Silenciar música" aria-pressed="false" title="Música (M)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3v4H2zM5 5h2v6H5zM7 3h2v10H7z"/><path class="on" d="M11 6h1v4h-1zM13 4h1v8h-1z"/><path class="off" d="M10 5h1v1h-1zM11 6h1v1h-1zM12 7h1v2h-1zM11 9h1v1h-1zM10 10h1v1h-1zM13 6h1v1h-1zM14 5h1v1h-1zM13 9h1v1h-1zM14 10h1v1h-1z"/></svg></button>
+    <img class="cameo" id="cameo" src="img/cameo.gif" alt="" hidden>
     <button class="pause" id="btnPause" aria-label="Pausa" title="Pausa (P o Esc)" hidden><i></i><i></i></button>
     <div class="overlay" id="ovPause" hidden>
       <h1>PAUSA</h1>
@@ -303,10 +305,22 @@ function playMusic(restart){if(restart)music.currentTime=0;const p=music.play();
 function stopMusic(){music.pause()}
 try{setMuted(localStorage.getItem('drones-muted')==='1')}catch(e){setMuted(false)}
 
-function newGame(){loadTop();overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic()}
-function setState(s){state=s;btnPause.hidden=s!=='play'}
+function newGame(){loadTop();resetCameo();overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic()}
+function setState(s){state=s;btnPause.hidden=s!=='play';if(s!=='play')cameo.hidden=true}
+
+/* ---------- Cameo: on levels 1-2, a portrait pops in under the top bar for 5 s — 10 s into the game, then every 5 min of play ---------- */
+const cameo=document.getElementById('cameo');
+const CAMEO_FIRST=10,CAMEO_EVERY=300,CAMEO_SHOW=5,CAMEO_MAX_WAVE=2;
+let cameoClock=0,cameoNext=CAMEO_FIRST,cameoLeft=0;
+function resetCameo(){cameoClock=0;cameoNext=CAMEO_FIRST;cameoLeft=0;cameo.hidden=true}
+function updCameo(dt){
+  cameoClock+=dt;
+  if(cameoClock>=cameoNext){cameoNext+=CAMEO_EVERY;if(wave<=CAMEO_MAX_WAVE)cameoLeft=CAMEO_SHOW}
+  if(cameoLeft>0){cameoLeft-=dt;if(wave>CAMEO_MAX_WAVE)cameoLeft=0}
+  cameo.hidden=!(cameoLeft>0);
+}
 function pause(){if(state!=='play')return;setState('paused');stopMusic();pointerDown=false;for(const k in keys)keys[k]=false;ovPause.hidden=false;document.getElementById('btnResume').focus()}
-function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');playMusic();last=performance.now()}
+function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');cameo.hidden=!(cameoLeft>0);playMusic();last=performance.now()}
 function saveBest(){if(score>best){best=score;try{localStorage.setItem('drones-best',best)}catch(e){}}}
 
 /* ---------- Leaderboard (api/scores.js on Vercel); without it the game falls back to the local record ---------- */
@@ -400,6 +414,7 @@ function update(dt){
     for(const d of drones){if(d.state==='enter')stepEnter(d,dt);else{const h=home(d);d.x=h.x;d.y=h.y;d.state='form'}}
     updParts(dt);return}
   if(banner>0)banner-=dt;
+  updCameo(dt);
   if(overTimer>0){overTimer-=dt;if(overTimer<=0){gameOver();return}}
   if(player.alive){
     let dx=0;if(keys.ArrowLeft||keys.a)dx-=1;if(keys.ArrowRight||keys.d)dx+=1;
