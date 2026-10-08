@@ -29,8 +29,8 @@ body{background:var(--black);color:var(--white);font-family:var(--pixel);overflo
 .screen{--s:1;position:relative;line-height:0;background:var(--black)}
 canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelated}
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:calc(14px*var(--s));padding:calc(44px*var(--s)) 16px calc(24px*var(--s));overflow-y:auto;line-height:1.7;text-align:center;background:rgba(0,0,0,.72)}
-.kicker{font-size:calc(8px*var(--s));color:var(--white);letter-spacing:.08em}
-.overlay h1{font-weight:400;font-size:calc(24px*var(--s));line-height:1.35;margin:0;color:var(--celeste);text-shadow:calc(3px*var(--s)) calc(3px*var(--s)) 0 var(--white)}
+.kicker{font-size:calc(8px*var(--s));color:var(--red);letter-spacing:.08em}
+.overlay h1{font-weight:400;font-size:calc(24px*var(--s));line-height:1.35;margin:0;color:var(--yellow);text-shadow:calc(3px*var(--s)) calc(3px*var(--s)) 0 var(--red)}
 .overlay p{margin:0;max-width:34ch;font-size:calc(9px*var(--s));color:var(--white)}
 .overlay .hint{color:var(--celeste);font-size:calc(8px*var(--s))}
 .hint-touch,.hint-mouse{display:none}
@@ -39,14 +39,14 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 /* the pixel font has no arrow glyphs: draw them on its 8x8 grid so they match the text */
 .key{display:inline-block;width:1em;height:1em;vertical-align:baseline;fill:currentColor;shape-rendering:crispEdges}
 .key.right{transform:scaleX(-1)}
-.btn{font-family:var(--pixel);font-size:calc(12px*var(--s));color:var(--black);background:var(--celeste);border:0;border-radius:0;padding:calc(12px*var(--s)) calc(20px*var(--s));cursor:pointer;box-shadow:4px 4px 0 var(--white)}
-.btn:hover{background:#a9dcff}
-.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--white)}
-.btn:focus-visible{outline:2px solid var(--white);outline-offset:4px}
+.btn{font-family:var(--pixel);font-size:calc(12px*var(--s));color:var(--black);background:var(--yellow);border:0;border-radius:0;padding:calc(12px*var(--s)) calc(20px*var(--s));cursor:pointer;box-shadow:4px 4px 0 var(--red)}
+.btn:hover{background:var(--white)}
+.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--red)}
+.btn:focus-visible{outline:2px solid var(--celeste);outline-offset:4px}
 /* phones turned sideways are too short for an upright arcade screen: ask to rotate, and the game pauses */
 .rotate{display:none;position:fixed;inset:0;z-index:5;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:var(--black);text-align:center;line-height:1.8}
 .rotate p{margin:0;font-size:10px;color:var(--white);max-width:30ch}
-.rotate .phone{width:34px;height:56px;border:3px solid var(--celeste);box-shadow:4px 4px 0 var(--white);animation:turn 1.6s steps(4) infinite}
+.rotate .phone{width:34px;height:56px;border:3px solid var(--yellow);box-shadow:4px 4px 0 var(--red);animation:turn 1.6s steps(4) infinite}
 @keyframes turn{0%,40%{transform:rotate(-90deg)}60%,100%{transform:rotate(0)}}
 @media (prefers-reduced-motion:reduce){.rotate .phone{animation:none}}
 @media (orientation:landscape) and (max-height:520px) and (pointer:coarse){.rotate{display:flex}}
