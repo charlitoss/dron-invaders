@@ -140,6 +140,18 @@ const PAL={
 const SPR={};for(const k in PAL)SPR[k]=DRONE.map(f=>pix(f,PAL[k]));
 const PTS={yellow:150,purple:80,red:60,blue:40};
 const PCOL={yellow:'#ffd800',purple:'#b44cff',red:'#ff2a2a',blue:'#2f8bff'};
+// 1px black outline around a sprite, so it reads against the bright stadium lights
+function outlined(src){const w=src.width+2,h=src.height+2,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  const a=src.getContext('2d').getImageData(0,0,src.width,src.height).data,op=(X,Y)=>X>=0&&Y>=0&&X<src.width&&Y<src.height&&a[(Y*src.width+X)*4+3]>0;
+  x.fillStyle='#000';
+  for(let Y=-1;Y<=src.height;Y++)for(let X=-1;X<=src.width;X++){if(op(X,Y))continue;
+    let n=false;for(let dy=-1;dy<=1&&!n;dy++)for(let dx=-1;dx<=1;dx++)if(op(X+dx,Y+dy)){n=true;break}
+    if(n)x.fillRect(X+1,Y+1,1,1)}
+  x.drawImage(src,1,1);return c}
+// player ship: 13×12 pixels plus outline, drawn at 2× (30×28 on screen)
+const PLAYER=outlined(pix(["......w......","......w......",".....wcw.....",".....wcw.....",".....wcw.....",".r..wwcww..r.",".r..wcccw..r.",".r.wwwywww.r.",".rwwwyyywwwr.","wwwwwyyywwwww","wwcccwwwcccww","w..cc.w.cc..w"],
+  {w:'#f4f4f4',c:'#6fc3ff',r:'#ff2a2a',y:'#ffd800'}));
+// small version for the lives counter
 const SHIP=pix([".....w.....",".....w.....","....wcw....","....wcw....",".r..wcw..r.",".r.wwwww.r.",".rwwwywwwr.","wwwwyyywwww","wwccwwwccww","w..cc.cc..w"],
   {w:'#f4f4f4',c:'#6fc3ff',r:'#ff2a2a',y:'#ffd800'});
 const BOMB=[pix([".w.","www","wyw","wyw",".y.",".r."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'}),
@@ -322,7 +334,7 @@ function update(dt){
     player.x=Math.max(14,Math.min(W-14,player.x));
     if(player.inv>0)player.inv-=dt;
     player.cool-=dt;
-    if((keys[' ']||pointerDown)&&player.cool<=0&&shots.length<3){shots.push({x:player.x,y:PY-14});player.cool=.24}
+    if((keys[' ']||pointerDown)&&player.cool<=0&&shots.length<3){shots.push({x:player.x,y:PY-17});player.cool=.24}
   }else if(lives>0){player.dead-=dt;if(player.dead<=0){player.alive=true;player.inv=2;player.x=W/2}}
   shots.forEach(s=>{s.y-=430*dt});shots=shots.filter(s=>s.y>-10);
   diveTimer-=dt;
@@ -346,7 +358,7 @@ function update(dt){
   }
   drones=drones.filter(d=>!d.dead);
   shots=shots.filter(s=>!s.gone);
-  bombs.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;if(player.alive&&Math.abs(b.x-player.x)<9&&Math.abs(b.y-PY)<9){b.gone=true;hitPlayer()}});
+  bombs.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;if(player.alive&&Math.abs(b.x-player.x)<11&&Math.abs(b.y-PY)<11){b.gone=true;hitPlayer()}});
   bombs=bombs.filter(b=>!b.gone&&b.y<H+10&&b.x>-10&&b.x<W+10);
   if(!drones.length&&lives>0){wave++;score+=500;startWave()}
   updParts(dt);
@@ -381,7 +393,7 @@ function render(){
   for(const p of parts){if(p.txt){txt(p.txt,p.x,p.y,'#f4f4f4','center');continue}ctx.fillStyle=p.col;ctx.fillRect(R(p.x),R(p.y),2,2)}
   const bf=Math.floor(time*10)%2;for(const b of bombs)spr(BOMB[bf],b.x,b.y,2);
   for(const s of shots)spr(BALL,s.x,s.y);
-  if(player.alive&&!(player.inv>0&&Math.floor(time*12)%2))spr(SHIP,player.x,PY,2);
+  if(player.alive&&!(player.inv>0&&Math.floor(time*12)%2))spr(PLAYER,player.x,PY,2);
   // HUD: 1UP · RECORD · VIDAS · NIVEL (no É in the pixel font) — red labels with values underneath
   ctx.textBaseline='top';
   const tw=t=>ctx.measureText(t).width;
