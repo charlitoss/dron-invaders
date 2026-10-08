@@ -471,7 +471,7 @@ function render(){
   ctx.textBaseline='top';
   const tw=t=>ctx.measureText(t).width;
   const inGame=state==='play'||state==='paused';
-  const left=16,right=W-16-(state==='play'?hudRightGap:0);
+  const left=16,right=W-16-hudRightGap;
   const wScore=Math.max(tw('1UP'),tw('000000')),wRec=Math.max(tw('RECORD'),tw('000000'));
   const wLives=Math.max(tw('VIDAS'),3*13-2),wLvl=Math.max(tw('NIVEL'),tw(String(wave)));
   // wide screens: score left, record centred, lives + level grouped on the right;
