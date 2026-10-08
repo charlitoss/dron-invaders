@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Dron Invaders: un shooter arcade para bajar los drones del cielo del estadio.">
+<title>Dron Invaders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+/* Layout: one arcade screen fitted 9:16, HUD drawn in-canvas, menus layered on top */
+:root{
+  --black:#000000;
+  --red:#ff2a2a;
+  --yellow:#ffd800;
+  --blue:#2f8bff;
+  --purple:#b44cff;
+  --celeste:#6fc3ff;
+  --white:#f4f4f4;
+  --grey:#8a8a96;
+  --pixel:"Press Start 2P","Courier New",monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--black);color:var(--white);font-family:var(--pixel);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+.stage{height:100%;display:flex;align-items:center;justify-content:center}
+.screen{position:relative;line-height:0;background:var(--black)}
+canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelated}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:14px;padding:44px 16px 24px;overflow-y:auto;line-height:1.7;text-align:center;background:rgba(0,0,0,.72)}
+.kicker{font-size:8px;color:var(--red);letter-spacing:.08em}
+.overlay h1{font-weight:400;font-size:clamp(18px,6vw,24px);line-height:1.35;margin:0;color:var(--yellow);text-shadow:3px 3px 0 var(--red)}
+.overlay p{margin:0;max-width:32ch;font-size:9px;color:var(--white)}
+.overlay .hint{color:var(--celeste)}
+.table{display:grid;grid-template-columns:auto auto auto;gap:6px 14px;align-items:center;font-size:9px;font-variant-numeric:tabular-nums}
+.table .cap{grid-column:1/-1;color:var(--red);font-size:8px;margin-bottom:2px}
+.table canvas{width:27px;height:21px;image-rendering:pixelated}
+.table .pts{text-align:right;color:var(--white)}
+.table .dive{text-align:left;color:var(--grey)}
+.btn{font-family:var(--pixel);font-size:12px;color:var(--black);background:var(--yellow);border:0;border-radius:0;padding:12px 20px;cursor:pointer;box-shadow:4px 4px 0 var(--red)}
+.btn:hover{background:var(--white)}
+.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--red)}
+.btn:focus-visible{outline:2px solid var(--celeste);outline-offset:4px}
+.score-big{font-size:28px;color:var(--white);line-height:1;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="screen" id="screen">
+    <canvas id="game" aria-label="Juego arcade: derribá los drones"></canvas>
+    <div class="overlay" id="ovStart">
+      <span class="kicker">PARTIDO DESPEDIDA · SHOW DE DRONES</span>
+      <h1>DRON<br>INVADERS</h1>
+      <p>Bajá los drones del cielo del estadio.</p>
+      <div class="table" id="ptsTable">
+        <span class="cap">TABLA DE PUNTOS</span>
+      </div>
+      <p class="hint">Tocá y arrastrá: dispara solo.<br>Teclado: ← → y ESPACIO.</p>
+      <button class="btn" id="btnStart">JUGAR</button>
+    </div>
+    <div class="overlay" id="ovOver" hidden>
+      <span class="kicker">FINAL DEL PARTIDO</span>
+      <h1>GAME OVER</h1>
+      <div class="score-big" id="oScore">0</div>
+      <p id="oBest">RÉCORD 0</p>
+      <button class="btn" id="btnAgain">REVANCHA</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const W=360,H=640,PY=596;
+const FONT8='8px "Press Start 2P", monospace';
+const cv=document.getElementById('game'),ctx=cv.getContext('2d');
+const stage=document.getElementById('stage'),screen=document.getElementById('screen');
+const ovStart=document.getElementById('ovStart'),ovOver=document.getElementById('ovOver');
+let scale=1,dpr=1;
+
+function resize(){
+  const r=stage.getBoundingClientRect();
+  const cw=Math.min(r.width,r.height*W/H),ch=cw*H/W;
+  screen.style.width=cw+'px';screen.style.height=ch+'px';
+  cv.style.width=cw+'px';cv.style.height=ch+'px';
+  dpr=Math.min(window.devicePixelRatio||1,3);
+  cv.width=Math.round(cw*dpr);cv.height=Math.round(ch*dpr);
+  scale=cw/W;
+}
+new ResizeObserver(resize).observe(stage);resize();
+
+/* ---------- Pixel sprites (original designs) ---------- */
+function pix(rows,pal){const h=rows.length,w=rows[0].length;const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  rows.forEach((r,y)=>[...r].forEach((ch,X)=>{if(ch!=='.'){x.fillStyle=pal[ch];x.fillRect(X,y,1,1)}}));return c}
+const DRONE=[
+  ["a.......a","a.......a","aa.bbb.aa",".abbwbba.","..bcbcb..","...bbb...","....b...."],
+  [".........",".........","...bbb...","aabbwbbaa","a.bcbcb.a","a..bbb..a","....b...."]
+];
+const PAL={
+  yellow:{a:'#ff2a2a',b:'#ffd800',c:'#ff2a2a',w:'#ffffff'},
+  purple:{a:'#2f8bff',b:'#b44cff',c:'#ffd800',w:'#ffffff'},
+  red:   {a:'#2f8bff',b:'#ff2a2a',c:'#ffd800',w:'#ffffff'},
+  blue:  {a:'#ffd800',b:'#2f8bff',c:'#ff2a2a',w:'#ffffff'}
+};
+const SPR={};for(const k in PAL)SPR[k]=DRONE.map(f=>pix(f,PAL[k]));
+const PTS={yellow:150,purple:80,red:60,blue:40};
+const PCOL={yellow:'#ffd800',purple:'#b44cff',red:'#ff2a2a',blue:'#2f8bff'};
+const SHIP=pix([".....w.....",".....w.....","....wcw....","....wcw....",".r..wcw..r.",".r.wwwww.r.",".rwwwywwwr.","wwwwyyywwww","wwccwwwccww","w..cc.cc..w"],
+  {w:'#f4f4f4',c:'#6fc3ff',r:'#ff2a2a',y:'#ffd800'});
+const BALL=pix([".www.","wwkww","wkkkw","wwkww",".www."],{w:'#f4f4f4',k:'#111111'});
+const FLAG=pix(["pcccc","pwwyw","pcccc","p....","p...."],{p:'#8a8a96',c:'#6fc3ff',w:'#f4f4f4',y:'#ffd800'});
+
+/* points table on the title screen */
+const tbl=document.getElementById('ptsTable');
+['yellow','purple','red','blue'].forEach(k=>{
+  const c=document.createElement('canvas');c.width=9;c.height=7;c.getContext('2d').drawImage(SPR[k][0],0,0);
+  const p=document.createElement('span');p.className='pts';p.textContent=PTS[k];
+  const d=document.createElement('span');d.className='dive';d.textContent=`${PTS[k]*2} EN PICADA`;
+  tbl.append(c,p,d);
+});
+
+/* ---------- Stadium backdrop: 8-bit, drawn on a 3px pixel grid ---------- */
+const PX=3,LW=W/PX,LH=Math.ceil(H/PX);
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry(7);
+const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+.5)/16);
+const dith=(v,x,y,levels)=>Math.max(0,Math.min(levels-1,Math.floor(v*(levels-1)+BAYER[(y&3)*4+(x&3)])));
+const hex=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+// roof edge: a curve sweeping up from bottom-left to the right, like the photo
+const arcY=new Float32Array(LW);
+{const P0=[-12,236],P1=[46,206],P2=[132,150];
+ for(let i=0;i<=600;i++){const t=i/600,u=1-t;const x=u*u*P0[0]+2*u*t*P1[0]+t*t*P2[0],y=u*u*P0[1]+2*u*t*P1[1]+t*t*P2[1];const xi=Math.round(x);if(xi>=0&&xi<LW)arcY[xi]=y}}
+const persp=x=>x/(LW-1);                      // 0 at left (far), 1 at right (near)
+const lampH=x=>Math.round(2+2*persp(x));      // lamps get taller toward the camera
+const lampW=x=>persp(x)<.4?4:5;
+const roofB=x=>Math.round(2+2*persp(x));
+const lamps=[];
+let segStart=0;for(let x=0;x<LW;){const w=lampW(x);lamps.push({x0:x,w,y:Math.round(arcY[x])});x+=w}
+function inLamp(x,y){const ay=Math.round(arcY[x]),h=lampH(x);if(y<ay-h||y>=ay)return 0;
+  const L=lamps.find(l=>x>=l.x0&&x<l.x0+l.w);if(!L)return 0;
+  if(x===L.x0+L.w-1)return 3;                   // dark gap between fixtures
+  return y===ay-h?1:2}                           // bright top row, lit face
+const CROWD=['#141822','#1b2433','#22222a','#2a2a30','#162436','#2c3646'];
+function paint(fn){const c=document.createElement('canvas');c.width=LW;c.height=LH;const g=c.getContext('2d');const im=g.createImageData(LW,LH);
+  for(let y=0;y<LH;y++)for(let x=0;x<LW;x++){const v=fn(x,y);if(!v)continue;const i=(y*LW+x)*4;im.data[i]=v[0];im.data[i+1]=v[1];im.data[i+2]=v[2];im.data[i+3]=v[3]??255}
+  g.putImageData(im,0,0);return c}
+
+const SKY=[null,...['#0b0b12','#15151f','#22222e','#33333f','#474754'].map(hex)];
+const C={lampTop:hex('#ffffff'),lamp:hex('#e6e6d2'),gap:hex('#2c2c36'),edge:hex('#6a6a76'),under:hex('#24242e'),truss:hex('#24242f'),beam:hex('#15151c'),stand:hex('#07070b'),tier:hex('#0e0e15')};
+const cr=mulberry(11);const crowdMap=new Uint8Array(LW*LH);for(let i=0;i<crowdMap.length;i++)crowdMap[i]=cr()<.42?1+(cr()*CROWD.length|0):0;
+const CROWDC=CROWD.map(hex);
+
+const stadium=paint((x,y)=>{
+  const ay=arcY[x],d=y-Math.round(ay),p=persp(x),lh=lampH(x),rb=roofB(x);
+  const L=inLamp(x,y);if(L)return L===1?C.lampTop:L===2?C.lamp:C.gap;
+  if(d<-lh){ // sky haze, strongest around the near (right) lights
+    const up=-d-lh;const v=Math.exp(-up/10)*(.12+.88*Math.pow(p,1.5))*.9+Math.exp(-up/28)*.16*p*p;
+    return SKY[dith(v,x,y,SKY.length)]}
+  if(d<rb)return d===0?C.edge:C.under;
+  const dd=d-rb;
+  if(dd<18&&((x+dd*.55)%13+13)%13<1.1)return C.truss;   // diagonal roof supports
+  if(dd===18)return C.beam;
+  const k=crowdMap[y*LW+x];
+  if(dd>2&&k&&(dd%4!==0))return CROWDC[k-1];
+  return dd%4===0?C.tier:C.stand;
+});
+// glow layers: dithered halos around the light band, animated at draw time
+const lampCY=x=>Math.round(arcY[x])-lampH(x)/2;
+const glowInner=paint((x,y)=>{if(inLamp(x,y))return 0;const p=persp(x);const dist=Math.abs(y-lampCY(x));
+  const v=Math.exp(-dist/(2.2+2.5*p))*(.35+.65*p);const q=dith(v,x,y,4);return q?[255,248,215,[0,70,130,190][q]]:0});
+const glowOuter=paint((x,y)=>{if(inLamp(x,y))return 0;const p=persp(x);const dy=lampCY(x)-y;
+  const dist=dy>0?dy:-dy*1.8;const v=Math.exp(-dist/(9+10*p))*(.2+.8*p*p);const q=dith(v,x,y,4);return q?[230,232,215,[0,26,52,84][q]]:0});
+const lampCenters=lamps.filter(l=>l.x0>=0).map(l=>({x:l.x0+(l.w-1)/2,y:Math.round(arcY[Math.min(LW-1,l.x0)])-lampH(l.x0)/2,p:persp(l.x0)}));
+const sparks=[];
+// phone lights in the crowd, on the pixel grid
+const flashes=[];
+for(let i=0;i<60;i++){const x=rnd()*LW|0,y=Math.round(arcY[x])+roofB(x)+3+(rnd()*60|0);if(y<LH)flashes.push({x,y,ph:rnd()*6.28,sp:.6+rnd()*2.2})}
+const beacon={x:44,y:Math.round(arcY[44])-16};
+const STARC=['#ff2a2a','#ffd800','#2f8bff','#b44cff','#f4f4f4','#6fc3ff','#3dff7a'];
+const stars=Array.from({length:70},()=>({x:rnd()*W,y:rnd()*H*.75,c:STARC[rnd()*STARC.length|0],ph:rnd()*6.28,sp:1+rnd()*3}));
+
+/* ---------- Formation: ship positions traced from the show's emblem outline ---------- */
+const FIGURE=[[174,52],[190,53],[205,55],[219,59],[233,64],[246,71],[258,80],[269,91],[279,103],[287,115],[294,129],[299,142],[282,154],[266,154],[250,154],[234,154],[218,154],[207,147],[202,133],[196,120],[190,106],[184,93],[178,79],[166,105],[161,119],[155,132],[150,146],[144,159],[169,164],[185,164],[201,164],[297,164],[303,189],[301,204],[297,218],[291,232],[284,245],[275,257],[264,268],[252,278],[240,286],[226,292],[212,297],[198,300],[182,301],[167,301],[152,298],[137,294],[124,288],[111,281],[99,272],[88,261],[78,249],[70,236],[64,223],[60,209],[82,201],[98,201],[114,201],[130,201],[145,202],[151,216],[157,229],[163,243],[169,256],[175,270],[186,255],[192,241],[198,228],[203,214],[209,201],[192,191],[176,191],[160,191],[64,191],[56,168],[58,153],[61,139],[67,125],[74,112],[82,99],[93,88],[104,78],[117,69],[130,63],[144,58],[158,54],[221,166],[237,166],[253,166],[269,166],[204,188],[141,188],[125,188],[109,188],[93,188],[77,188]];
+function buildSlots(){return FIGURE.map(([hx,hy])=>({hx,hy}))}
+// arcade colour bands, top to bottom: yellow flagships, purple, red, blue
+function colourFor(hy,minY,maxY){const k=(hy-minY)/Math.max(1,maxY-minY);return k<.22?'yellow':k<.5?'purple':k<.75?'red':'blue'}
+
+/* ---------- State ---------- */
+let state='title',score=0,wave=1,lives=3,best=0,time=0,banner=0;
+try{best=+localStorage.getItem('drones-best')||0}catch(e){}
+let drones=[],shots=[],bombs=[],parts=[];
+const player={x:W/2,alive:true,inv:0,cool:0,dead:0};
+let diveTimer=0,swayT=0;
+const keys={};let pointerX=null,pointerDown=false;
+
+function startWave(){
+  const slots=buildSlots();
+  const ys=slots.map(s=>s.hy),minY=Math.min(...ys),maxY=Math.max(...ys);
+  drones=slots.map((sl,i)=>({...sl,col:colourFor(sl.hy,minY,maxY),state:'enter',x:30+Math.random()*300,y:H+20,sx:0,sy:0,t:0,
+    delay:i*.025+Math.random()*.3,dur:1.4+Math.random()*.5,fired:false,ph:Math.random()*6.28}));
+  drones.forEach(d=>{d.sx=d.x;d.sy=d.y});
+  diveTimer=2.5;banner=2;shots=[];bombs=[];
+}
+function newGame(){score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();state='play'}
+
+function formOffset(){return{x:Math.sin(swayT*.7)*12,y:0}}
+function home(d){const o=formOffset();return{x:d.hx+o.x,y:d.hy+o.y}}
+function stepEnter(d,dt){
+  d.t+=dt;const k=Math.max(0,Math.min(1,(d.t-d.delay)/d.dur));const e=1-Math.pow(1-k,3);const h=home(d);
+  d.x=d.sx+(h.x-d.sx)*e;d.y=d.sy+(h.y-d.sy)*e-Math.sin(k*Math.PI)*40;
+  if(k>=1)d.state='form';
+}
+function bez(p0,p1,p2,p3,t){const u=1-t;return u*u*u*p0+3*u*u*t*p1+3*u*t*t*p2+t*t*t*p3}
+
+function launchDive(){
+  const pool=drones.filter(d=>d.state==='form');if(!pool.length)return;
+  const flags=pool.filter(d=>d.col==='yellow');
+  const lead=(flags.length&&Math.random()<.3)?flags[Math.random()*flags.length|0]:pool[Math.random()*pool.length|0];
+  const group=[lead];
+  // a flagship dives with escorts, like the old arcade cabinets
+  const escorts=lead.col==='yellow'?2:(wave>1&&Math.random()<.5?1:0);
+  if(escorts)pool.filter(d=>d!==lead&&d.col!=='yellow'&&Math.hypot(d.hx-lead.hx,d.hy-lead.hy)<40).slice(0,escorts+(wave>3?1:0)).forEach(d=>group.push(d));
+  group.forEach((d,i)=>{
+    const dir=d.hx<W/2?-1:1,tx=player.x+(Math.random()-.5)*80;
+    d.state='dive';d.t=-i*.12;d.dur=Math.max(1.5,2.6-wave*.12);d.fired=false;
+    d.px=[d.x,d.x+dir*70,tx-dir*40,tx+dir*30];d.py=[d.y,d.y-50,H*.62,H+40];
+  });
+}
+
+function boom(x,y,col,n=14){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=40+Math.random()*120;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4+Math.random()*.5,col})}}
+
+function hitPlayer(){
+  if(player.inv>0||!player.alive)return;
+  boom(player.x,PY,'#ff2a2a',24);boom(player.x,PY,'#ffd800',16);boom(player.x,PY,'#f4f4f4',10);
+  player.alive=false;player.dead=1.4;lives--;
+  if(lives<=0)setTimeout(gameOver,1100);
+}
+function gameOver(){
+  state='over';if(score>best){best=score;try{localStorage.setItem('drones-best',best)}catch(e){}}
+  document.getElementById('oScore').textContent=score;
+  document.getElementById('oBest').textContent='RÉCORD '+best;
+  ovOver.hidden=false;document.getElementById('btnAgain').focus();
+}
+
+/* ---------- Update ---------- */
+function update(dt){
+  time+=dt;swayT+=dt;
+  for(const s of stars){s.y+=14*dt;if(s.y>H)s.y-=H}
+  if(state!=='play'){
+    for(const d of drones){if(d.state==='enter')stepEnter(d,dt);else{const h=home(d);d.x=h.x;d.y=h.y;d.state='form'}}
+    updParts(dt);return}
+  if(banner>0)banner-=dt;
+  if(player.alive){
+    let dx=0;if(keys.ArrowLeft||keys.a)dx-=1;if(keys.ArrowRight||keys.d)dx+=1;
+    if(dx)player.x+=dx*210*dt;
+    else if(pointerX!=null)player.x+=(pointerX-player.x)*Math.min(1,dt*14);
+    player.x=Math.max(14,Math.min(W-14,player.x));
+    if(player.inv>0)player.inv-=dt;
+    player.cool-=dt;
+    if((keys[' ']||pointerDown)&&player.cool<=0&&shots.length<3){shots.push({x:player.x,y:PY-14});player.cool=.24}
+  }else if(lives>0){player.dead-=dt;if(player.dead<=0){player.alive=true;player.inv=2;player.x=W/2}}
+  shots.forEach(s=>{s.y-=430*dt});shots=shots.filter(s=>s.y>-10);
+  diveTimer-=dt;
+  if(diveTimer<=0&&drones.every(d=>d.state!=='enter')){launchDive();diveTimer=Math.max(.55,2.1-wave*.18)*(.6+Math.random()*.8)}
+  for(const d of drones){
+    if(d.state==='enter')stepEnter(d,dt);
+    else if(d.state==='form'){const h=home(d);d.x=h.x;d.y=h.y;
+      if(Math.random()<dt*.01*wave&&bombs.length<2+wave)bombs.push({x:d.x,y:d.y+5,vx:0,vy:150});
+    }else if(d.state==='dive'){
+      d.t+=dt/d.dur;const t=Math.max(0,d.t);
+      d.x=bez(...d.px,t);d.y=bez(...d.py,t);
+      if(!d.fired&&t>.32){d.fired=true;const a=Math.atan2(PY-d.y,player.x-d.x);const sp=180+wave*12;bombs.push({x:d.x,y:d.y,vx:Math.cos(a)*sp*.5,vy:Math.max(120,Math.sin(a)*sp)})}
+      if(t>=1){d.state='return';d.t=0;d.y=-20}
+    }else if(d.state==='return'){
+      d.t+=dt;const h=home(d);const k=Math.min(1,d.t/1.1);d.x=h.x;d.y=-20+(h.y+20)*(1-Math.pow(1-k,2));if(k>=1)d.state='form';
+    }
+    for(const s of shots){if(!s.gone&&Math.abs(s.x-d.x)<10&&Math.abs(s.y-d.y)<9){s.gone=true;d.dead=true;
+      const pts=PTS[d.col]*(d.state==='dive'?2:1);score+=pts;boom(d.x,d.y,PCOL[d.col]);boom(d.x,d.y,'#f4f4f4',5);
+      if(d.state==='dive')parts.push({x:d.x,y:d.y,vx:0,vy:-20,life:1,txt:String(pts)});break}}
+    if(!d.dead&&player.alive&&d.state==='dive'&&Math.abs(d.x-player.x)<16&&Math.abs(d.y-PY)<14){d.dead=true;boom(d.x,d.y,PCOL[d.col]);hitPlayer()}
+  }
+  drones=drones.filter(d=>!d.dead);
+  shots=shots.filter(s=>!s.gone);
+  bombs.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;if(player.alive&&Math.abs(b.x-player.x)<9&&Math.abs(b.y-PY)<9){b.gone=true;hitPlayer()}});
+  bombs=bombs.filter(b=>!b.gone&&b.y<H+10&&b.x>-10&&b.x<W+10);
+  if(!drones.length&&lives>0){wave++;score+=500;startWave()}
+  updParts(dt);
+}
+function updParts(dt){parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;if(!p.txt){p.vy+=60*dt;p.vx*=.97}p.life-=dt});parts=parts.filter(p=>p.life>0)}
+
+/* ---------- Draw ---------- */
+const R=Math.round;
+function spr(img,x,y,s=1){ctx.drawImage(img,R(x-img.width*s/2),R(y-img.height*s/2),img.width*s,img.height*s)}
+function txt(s,x,y,col,align='left'){ctx.fillStyle=col;ctx.textAlign=align;ctx.fillText(s,R(x),R(y))}
+function render(){
+  ctx.setTransform(scale*dpr,0,0,scale*dpr,0,0);
+  ctx.imageSmoothingEnabled=false;
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  for(const s of stars){if(Math.sin(time*s.sp+s.ph)>-.2){ctx.fillStyle=s.c;ctx.fillRect(R(s.x),R(s.y),1,1)}}
+  ctx.drawImage(stadium,0,0,LW*PX,LH*PX);
+  for(const f of flashes){if(Math.sin(time*f.sp+f.ph)>.8){ctx.fillStyle='#fffbe0';ctx.fillRect(f.x*PX,f.y*PX,PX,PX)}}
+  if(Math.floor(time*1.2)%2===0){ctx.fillStyle='#ff2a2a';ctx.fillRect(beacon.x*PX,beacon.y*PX,PX,PX)}
+  // floodlight glow: two dithered halos breathing out of phase, plus the odd lamp flaring
+  ctx.globalCompositeOperation='lighter';
+  ctx.globalAlpha=.75+.25*Math.sin(time*1.1);ctx.drawImage(glowOuter,0,0,LW*PX,LH*PX);
+  ctx.globalAlpha=.8+.2*Math.sin(time*2.3+1.4);ctx.drawImage(glowInner,0,0,LW*PX,LH*PX);
+  ctx.globalAlpha=1;
+  if(Math.random()<.06){const L=lampCenters[Math.floor(Math.pow(Math.random(),.6)*lampCenters.length)];if(L)sparks.push({...L,life:.35})}
+  for(const s of sparks){s.life-=1/60;const r=s.p>.5&&s.life>.15?2:1;const cx=Math.round(s.x)*PX,cy=Math.round(s.y)*PX;
+    ctx.fillStyle='rgba(255,250,220,.9)';ctx.fillRect(cx-r*PX,cy,(2*r+1)*PX,PX);ctx.fillRect(cx,cy-r*PX,PX,(2*r+1)*PX)}
+  for(let i=sparks.length-1;i>=0;i--)if(sparks[i].life<=0)sparks.splice(i,1);
+  ctx.globalCompositeOperation='source-over';
+  const frame=Math.floor(time*3)%2;
+  for(const d of drones){const f=d.state==='dive'?Math.floor(time*8)%2:(frame+(d.hx>>5))%2;spr(SPR[d.col][f],d.x,d.y,2)}
+  ctx.font=FONT8;ctx.textBaseline='middle';
+  for(const p of parts){if(p.txt){txt(p.txt,p.x,p.y,'#f4f4f4','center');continue}ctx.fillStyle=p.col;ctx.fillRect(R(p.x),R(p.y),2,2)}
+  for(const b of bombs){ctx.fillStyle='#f4f4f4';ctx.fillRect(R(b.x),R(b.y-3),1,4);ctx.fillStyle='#ffd800';ctx.fillRect(R(b.x),R(b.y+1),1,1)}
+  for(const s of shots)spr(BALL,s.x,s.y);
+  if(player.alive&&!(player.inv>0&&Math.floor(time*12)%2))spr(SHIP,player.x,PY,2);
+  // HUD
+  ctx.textBaseline='top';
+  txt('1UP',16,10,'#ff2a2a');txt(String(score).padStart(6,'0'),16,22,'#f4f4f4');
+  txt('RÉCORD',W/2,10,'#ff2a2a','center');txt(String(Math.max(best,score)).padStart(6,'0'),W/2,22,'#f4f4f4','center');
+  txt('OLA',W-16,10,'#ff2a2a','right');txt(String(wave),W-16,22,'#f4f4f4','right');
+  if(state==='play'){
+    for(let i=0;i<Math.max(0,lives-(player.alive?1:0));i++)spr(SHIP,20+i*16,H-12);
+    for(let i=0;i<Math.min(wave,10);i++)spr(FLAG,W-14-i*8,H-12);
+    if(banner>0&&Math.floor(time*4)%2===0){
+      ctx.textBaseline='middle';
+      txt('OLA '+wave,W/2,330,'#ffd800','center');
+      txt(wave===1?'¡DESPEGAN LOS DRONES!':'¡MÁS RÁPIDO!',W/2,350,'#6fc3ff','center');
+    }
+  }
+}
+
+let last=performance.now();
+function loop(now){const dt=Math.max(0,Math.min(.04,(now-last)/1000));last=now;update(dt);render();requestAnimationFrame(loop)}
+startWave();drones.forEach(d=>{d.state='form'});state='title';
+requestAnimationFrame(loop);
+
+/* ---------- Input ---------- */
+const map={Left:'ArrowLeft',Right:'ArrowRight',Spacebar:' '};
+const keyName=e=>map[e.key]||(e.key.length===1?e.key.toLowerCase():e.key);
+addEventListener('keydown',e=>{if(e.target.tagName==='BUTTON'&&e.key===' ')return;keys[keyName(e)]=true;if([' ','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault()});
+addEventListener('keyup',e=>{keys[keyName(e)]=false});
+function toGame(e){const r=cv.getBoundingClientRect();return(e.clientX-r.left)/r.width*W}
+cv.addEventListener('pointerdown',e=>{pointerDown=true;pointerX=toGame(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}});
+cv.addEventListener('pointermove',e=>{if(pointerDown||e.pointerType==='mouse')pointerX=toGame(e)});
+const up=()=>{pointerDown=false;if(matchMedia('(pointer:coarse)').matches)pointerX=null};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('pointerleave',()=>{if(!pointerDown)pointerX=null});
+
+document.getElementById('btnStart').addEventListener('click',()=>{ovStart.hidden=true;newGame()});
+document.getElementById('btnAgain').addEventListener('click',()=>{ovOver.hidden=true;newGame()});
+})();
+</script>
+
+</body>
+</html>
