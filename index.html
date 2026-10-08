@@ -55,10 +55,14 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 .btn.alt{background:transparent;color:var(--celeste);box-shadow:none;border:2px solid var(--celeste)}
 .btn.alt:hover{background:rgba(111,195,255,.15)}
 .menu{display:flex;flex-direction:column;align-items:stretch;gap:calc(14px*var(--s))}
-.pause{position:absolute;z-index:2;top:calc(8px*var(--s));right:calc(8px*var(--s));width:calc(30px*var(--s));height:calc(30px*var(--s));display:flex;align-items:center;justify-content:center;gap:calc(4px*var(--s));padding:0;background:rgba(0,0,0,.55);border:2px solid var(--celeste);border-radius:0;cursor:pointer}
+.pause,.sound{position:absolute;z-index:2;top:calc(8px*var(--s));right:calc(8px*var(--s));width:calc(30px*var(--s));height:calc(30px*var(--s));display:flex;align-items:center;justify-content:center;gap:calc(4px*var(--s));padding:0;background:rgba(0,0,0,.55);border:2px solid var(--celeste);border-radius:0;cursor:pointer}
 .pause i{display:block;width:calc(4px*var(--s));height:calc(12px*var(--s));background:var(--celeste)}
-.pause:hover{background:rgba(111,195,255,.18)}
-.pause:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.pause:hover,.sound:hover{background:rgba(111,195,255,.18)}
+.pause:focus-visible,.sound:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.sound{right:calc(44px*var(--s))}
+.sound svg{width:calc(16px*var(--s));height:calc(16px*var(--s));fill:var(--celeste);shape-rendering:crispEdges}
+.sound .off,.sound[aria-pressed="true"] .on{display:none}
+.sound[aria-pressed="true"] .off{display:inline}
 .score-big{font-size:calc(28px*var(--s));color:var(--white);line-height:1;font-variant-numeric:tabular-nums}
 </style>
 </head>
@@ -73,9 +77,10 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
       <div class="table" id="ptsTable">
         <span class="cap">TABLA DE PUNTOS</span>
       </div>
-      <p class="hint"><span class="hint-touch">Tocá y arrastrá: dispara solo.</span><span class="hint-mouse">Mouse o ← → para moverte.<br>Click o ESPACIO para disparar.</span></p>
+      <p class="hint"><span class="hint-touch">Tocá y arrastrá: dispara solo.</span><span class="hint-mouse">Mouse o ← → para moverte.<br>Click o ESPACIO para disparar.<br>M: música.</span></p>
       <button class="btn" id="btnStart">JUGAR</button>
     </div>
+    <button class="sound" id="btnSound" aria-label="Silenciar música" aria-pressed="false" title="Música (M)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3v4H2zM5 5h2v6H5zM7 3h2v10H7z"/><path class="on" d="M11 6h1v4h-1zM13 4h1v8h-1z"/><path class="off" d="M10 5h1v1h-1zM11 6h1v1h-1zM12 7h1v2h-1zM11 9h1v1h-1zM10 10h1v1h-1zM13 6h1v1h-1zM14 5h1v1h-1zM13 9h1v1h-1zM14 10h1v1h-1z"/></svg></button>
     <button class="pause" id="btnPause" aria-label="Pausa" title="Pausa (P o Esc)" hidden><i></i><i></i></button>
     <div class="overlay" id="ovPause" hidden>
       <h1>PAUSA</h1>
@@ -85,6 +90,8 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
       </div>
       <p class="hint"><span class="hint-mouse">P o ESC para seguir.</span></p>
     </div>
+    <!-- Music: "Arcade Beat" by NoCopyrightSound633 — thanks! https://pixabay.com/music/video-games-arcade-beat-323176/ (Pixabay Content License) -->
+    <audio id="music" src="music/arcade-beat.mp3" loop preload="auto"></audio>
     <div class="overlay" id="ovOver" hidden>
       <span class="kicker">FINAL DEL PARTIDO</span>
       <h1>GAME OVER</h1>
@@ -263,13 +270,21 @@ function startWave(){
   drones.forEach(d=>{d.sx=d.x;d.sy=d.y});
   diveTimer=2.5;banner=2;shots=[];bombs=[];
 }
-function newGame(){overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play')}
+/* ---------- Music: plays during a game, stops on pause / game over; mute is remembered ---------- */
+const music=document.getElementById('music'),btnSound=document.getElementById('btnSound');
+music.volume=.5;
+function setMuted(m){music.muted=m;btnSound.setAttribute('aria-pressed',m);try{localStorage.setItem('drones-muted',m?'1':'0')}catch(e){}}
+function playMusic(restart){if(restart)music.currentTime=0;const p=music.play();if(p)p.catch(()=>{})}
+function stopMusic(rewind){music.pause();if(rewind)music.currentTime=0}
+try{setMuted(localStorage.getItem('drones-muted')==='1')}catch(e){setMuted(false)}
+
+function newGame(){overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic(true)}
 function setState(s){state=s;btnPause.hidden=s!=='play'}
-function pause(){if(state!=='play')return;setState('paused');pointerDown=false;for(const k in keys)keys[k]=false;ovPause.hidden=false;document.getElementById('btnResume').focus()}
-function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');last=performance.now()}
+function pause(){if(state!=='play')return;setState('paused');stopMusic();pointerDown=false;for(const k in keys)keys[k]=false;ovPause.hidden=false;document.getElementById('btnResume').focus()}
+function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');playMusic();last=performance.now()}
 function saveBest(){if(score>best){best=score;try{localStorage.setItem('drones-best',best)}catch(e){}}}
 function exitToTitle(){
-  saveBest();ovPause.hidden=true;ovOver.hidden=true;
+  saveBest();stopMusic(true);ovPause.hidden=true;ovOver.hidden=true;
   shots=[];bombs=[];parts=[];player.x=W/2;player.alive=true;player.inv=0;
   setState('title');startWave();ovStart.hidden=false;document.getElementById('btnStart').focus();
 }
@@ -307,7 +322,7 @@ function hitPlayer(){
   if(lives<=0)overTimer=1.1;
 }
 function gameOver(){
-  setState('over');saveBest();
+  setState('over');saveBest();stopMusic(true);
   document.getElementById('oScore').textContent=score;
   document.getElementById('oBest').textContent='RECORD '+best;
   ovOver.hidden=false;document.getElementById('btnAgain').focus();
@@ -430,8 +445,8 @@ function onWidthChange(shift){
 buildScene();
 new ResizeObserver(resize).observe(stage);resize();
 
-// keep the wave counter clear of the pause button (measured in playfield px)
-function measureHud(){const b=btnPause.getBoundingClientRect(),c=cv.getBoundingClientRect();hudRightGap=b.width?(c.right-b.left)/scale-8:0}
+// keep the wave counter clear of the sound + pause buttons (measured in playfield px)
+function measureHud(){const b=btnSound.getBoundingClientRect(),c=cv.getBoundingClientRect();hudRightGap=b.width?(c.right-b.left)/scale-8:0}
 new ResizeObserver(()=>{const was=btnPause.hidden;btnPause.hidden=false;measureHud();btnPause.hidden=was}).observe(screen);
 
 let last=performance.now();
@@ -445,6 +460,7 @@ const map={Left:'ArrowLeft',Right:'ArrowRight',Spacebar:' '};
 const keyName=e=>map[e.key]||(e.key.length===1?e.key.toLowerCase():e.key);
 addEventListener('keydown',e=>{
   if((e.key==='Escape'||e.key==='p'||e.key==='P')&&!e.repeat){if(state==='play'){pause();e.preventDefault();return}if(state==='paused'){resume();e.preventDefault();return}}
+  if((e.key==='m'||e.key==='M')&&!e.repeat){setMuted(!music.muted);return}
   if(e.target.tagName==='BUTTON'&&e.key===' ')return;keys[keyName(e)]=true;if([' ','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault()});
 addEventListener('keyup',e=>{keys[keyName(e)]=false});
 function toGame(e){const r=cv.getBoundingClientRect();return(e.clientX-r.left)/r.width*W}
@@ -456,6 +472,7 @@ cv.addEventListener('pointerleave',()=>{if(!pointerDown)pointerX=null});
 
 document.getElementById('btnStart').addEventListener('click',()=>{ovStart.hidden=true;newGame()});
 btnPause.addEventListener('click',pause);
+btnSound.addEventListener('click',()=>{setMuted(!music.muted);btnSound.blur()});
 document.getElementById('btnResume').addEventListener('click',resume);
 document.getElementById('btnExit').addEventListener('click',exitToTitle);
 // leaving the tab or turning the phone sideways pauses a running game
