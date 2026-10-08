@@ -41,6 +41,15 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 .table canvas{width:calc(27px*var(--s));height:calc(21px*var(--s));image-rendering:pixelated}
 .table .pts{text-align:right;color:var(--white)}
 .table .dive{text-align:left;color:var(--grey)}
+.board{grid-template-columns:auto auto auto}
+.board .pos{text-align:right;color:var(--grey)}
+.board .nm{text-align:left;color:var(--yellow);letter-spacing:.1em}
+.board .me{color:var(--celeste)}
+.entry{display:flex;flex-direction:column;align-items:center;gap:calc(8px*var(--s))}
+.entry .row{display:flex;gap:calc(10px*var(--s));align-items:center}
+.entry input{width:4.2em;font-family:var(--pixel);font-size:max(16px,calc(16px*var(--s)));text-align:center;text-transform:uppercase;letter-spacing:.15em;color:var(--white);background:var(--black);border:2px solid var(--yellow);border-radius:0;padding:calc(6px*var(--s)) 0}
+.entry input:focus{outline:2px solid var(--celeste);outline-offset:2px}
+.btn.small{font-size:calc(10px*var(--s));padding:calc(8px*var(--s)) calc(12px*var(--s))}
 /* the pixel font has no arrow glyphs: draw them on its 8x8 grid so they match the text */
 .key{display:inline-block;width:1em;height:1em;vertical-align:baseline;fill:currentColor;shape-rendering:crispEdges}
 .key.right{transform:scaleX(-1)}
@@ -80,6 +89,9 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
       <div class="table" id="ptsTable">
         <span class="cap">TABLA DE PUNTOS</span>
       </div>
+      <div class="table board" id="topSplash" hidden>
+        <span class="cap">MEJORES PUNTAJES</span>
+      </div>
       <button class="btn" id="btnStart">JUGAR</button>
       <p class="hint"><span class="hint-touch">Tocá y arrastrá: dispara solo.</span><span class="hint-mouse">Mouse o <svg class="key" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> <svg class="key right" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> para moverte.<br>Click o ESPACIO para disparar.<br>M: música.</span></p>
     </div>
@@ -100,6 +112,16 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
       <h1>GAME OVER</h1>
       <div class="score-big" id="oScore">0</div>
       <p id="oBest">RECORD 0</p>
+      <form class="entry" id="nameForm" hidden>
+        <label class="kicker" for="nameInput">¡ENTRASTE AL TOP 10!<br>TUS INICIALES</label>
+        <div class="row">
+          <input id="nameInput" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-label="Tus iniciales (3 letras)">
+          <button class="btn small" type="submit">OK</button>
+        </div>
+      </form>
+      <div class="table board" id="topOver" hidden>
+        <span class="cap">MEJORES PUNTAJES</span>
+      </div>
       <button class="btn" id="btnAgain">REVANCHA</button>
     </div>
   </div>
@@ -281,11 +303,47 @@ function playMusic(restart){if(restart)music.currentTime=0;const p=music.play();
 function stopMusic(){music.pause()}
 try{setMuted(localStorage.getItem('drones-muted')==='1')}catch(e){setMuted(false)}
 
-function newGame(){overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic()}
+function newGame(){loadTop();overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic()}
 function setState(s){state=s;btnPause.hidden=s!=='play'}
 function pause(){if(state!=='play')return;setState('paused');stopMusic();pointerDown=false;for(const k in keys)keys[k]=false;ovPause.hidden=false;document.getElementById('btnResume').focus()}
 function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');playMusic();last=performance.now()}
 function saveBest(){if(score>best){best=score;try{localStorage.setItem('drones-best',best)}catch(e){}}}
+
+/* ---------- Leaderboard (api/scores.js on Vercel); without it the game falls back to the local record ---------- */
+const topSplash=document.getElementById('topSplash'),topOver=document.getElementById('topOver');
+const nameForm=document.getElementById('nameForm'),nameInput=document.getElementById('nameInput');
+let top=[],topReady=false,submitted=false;
+const record=()=>Math.max(best,top.length?top[0].score:0);
+const cleanName=v=>v.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,3);
+const qualifies=s=>topReady&&s>0&&s%10===0&&(top.length<10||s>top[top.length-1].score);
+function api(opts){return fetch('api/scores',opts).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})}
+function fillBoard(el,n,meRank){
+  el.querySelectorAll(':scope>:not(.cap)').forEach(x=>x.remove());
+  top.slice(0,n).forEach((e,i)=>{
+    const cells=[['pos',(i+1)+'.'],['nm',e.name],['pts',String(e.score).padStart(6,'0')]].map(([c,t])=>{const x=document.createElement('span');x.className=c+(i+1===meRank?' me':'');x.textContent=t;return x});
+    el.append(...cells);
+  });
+  el.hidden=!top.length;
+}
+function setTop(t){top=t;topReady=true;fillBoard(topSplash,5)}
+function loadTop(){api().then(d=>setTop(d.top)).catch(()=>{})}
+// title screen alternates the points table with the top 5, like an arcade attract mode
+setInterval(()=>{if(state!=='title'||!top.length)return;const showTop=topSplash.hidden;topSplash.hidden=!showTop;tbl.hidden=showTop},5000);
+function showGameOverBoard(){
+  submitted=false;fillBoard(topOver,10);
+  nameForm.hidden=!qualifies(score);
+  if(!nameForm.hidden){try{nameInput.value=localStorage.getItem('drones-name')||''}catch(e){}nameInput.focus();nameInput.select()}
+  else document.getElementById('btnAgain').focus();
+}
+nameInput.addEventListener('input',()=>{nameInput.value=cleanName(nameInput.value)});
+nameForm.addEventListener('submit',e=>{
+  e.preventDefault();const name=cleanName(nameInput.value);if(!name||submitted)return;submitted=true;
+  try{localStorage.setItem('drones-name',name)}catch(e){}
+  api({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score})})
+    .then(d=>{setTop(d.top);fillBoard(topOver,10,d.rank);document.getElementById('oBest').textContent='RECORD '+record()})
+    .catch(()=>{})
+    .finally(()=>{nameForm.hidden=true;document.getElementById('btnAgain').focus()});
+});
 function exitToTitle(){
   saveBest();playMusic();ovPause.hidden=true;ovOver.hidden=true;
   shots=[];bombs=[];parts=[];player.x=W/2;player.alive=true;player.inv=0;
@@ -327,8 +385,8 @@ function hitPlayer(){
 function gameOver(){
   setState('over');saveBest();
   document.getElementById('oScore').textContent=score;
-  document.getElementById('oBest').textContent='RECORD '+best;
-  ovOver.hidden=false;document.getElementById('btnAgain').focus();
+  document.getElementById('oBest').textContent='RECORD '+record();
+  ovOver.hidden=false;showGameOverBoard();
 }
 
 /* ---------- Update ---------- */
@@ -424,7 +482,7 @@ function render(){
     recC=left+wScore+gap+wRec/2;livesX=recC+wRec/2+gap;
   }
   txt('1UP',left,10,'#ff2a2a');txt(String(score).padStart(6,'0'),left,22,'#f4f4f4');
-  txt('RECORD',recC,10,'#ff2a2a','center');txt(String(Math.max(best,score)).padStart(6,'0'),recC,22,'#f4f4f4','center');
+  txt('RECORD',recC,10,'#ff2a2a','center');txt(String(Math.max(record(),score)).padStart(6,'0'),recC,22,'#f4f4f4','center');
   txt('VIDAS',livesX+wLives/2,10,'#ff2a2a','center');
   if(inGame)for(let i=0;i<lives;i++)spr(SHIP,livesX+wLives/2+(i-(lives-1)/2)*13,27);
   txt('NIVEL',right,10,'#ff2a2a','right');txt(String(wave),right,22,'#f4f4f4','right');
@@ -468,6 +526,7 @@ requestAnimationFrame(loop);
 const map={Left:'ArrowLeft',Right:'ArrowRight',Spacebar:' '};
 const keyName=e=>map[e.key]||(e.key.length===1?e.key.toLowerCase():e.key);
 addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
   if((e.key==='Escape'||e.key==='p'||e.key==='P')&&!e.repeat){if(state==='play'){pause();e.preventDefault();return}if(state==='paused'){resume();e.preventDefault();return}}
   if((e.key==='m'||e.key==='M')&&!e.repeat){setMuted(!music.muted);return}
   if(e.target.tagName==='BUTTON'&&e.key===' ')return;keys[keyName(e)]=true;if([' ','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault()});
@@ -480,6 +539,7 @@ cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 cv.addEventListener('pointerleave',()=>{if(!pointerDown)pointerX=null});
 
 document.getElementById('btnStart').addEventListener('click',()=>{ovStart.hidden=true;newGame()});
+loadTop();
 btnPause.addEventListener('click',pause);
 btnSound.addEventListener('click',()=>{setMuted(!music.muted);btnSound.blur()});
 document.getElementById('btnResume').addEventListener('click',resume);
