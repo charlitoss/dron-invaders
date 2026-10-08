@@ -32,15 +32,13 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 .kicker{font-size:calc(8px*var(--s));color:var(--red);letter-spacing:.08em}
 .overlay h1{font-weight:400;font-size:calc(24px*var(--s));line-height:1.35;margin:0;color:var(--yellow);text-shadow:calc(3px*var(--s)) calc(3px*var(--s)) 0 var(--red)}
 .overlay p{margin:0;max-width:34ch;font-size:calc(9px*var(--s));color:var(--white)}
-.overlay .hint{color:var(--celeste)}
+.overlay .hint{color:var(--celeste);font-size:calc(8px*var(--s))}
 .hint-touch,.hint-mouse{display:none}
 @media (pointer:coarse){.hint-touch{display:inline}}
 @media (pointer:fine),(pointer:none){.hint-mouse{display:inline}}
-.table{display:grid;grid-template-columns:auto auto auto;gap:calc(6px*var(--s)) calc(14px*var(--s));align-items:center;font-size:calc(9px*var(--s));font-variant-numeric:tabular-nums}
-.table .cap{grid-column:1/-1;color:var(--red);font-size:calc(8px*var(--s));margin-bottom:2px}
-.table canvas{width:calc(27px*var(--s));height:calc(21px*var(--s));image-rendering:pixelated}
-.table .pts{text-align:right;color:var(--white)}
-.table .dive{text-align:left;color:var(--grey)}
+/* the pixel font has no arrow glyphs: draw them on its 8x8 grid so they match the text */
+.key{display:inline-block;width:1em;height:1em;vertical-align:baseline;fill:currentColor;shape-rendering:crispEdges}
+.key.right{transform:scaleX(-1)}
 .btn{font-family:var(--pixel);font-size:calc(12px*var(--s));color:var(--black);background:var(--yellow);border:0;border-radius:0;padding:calc(12px*var(--s)) calc(20px*var(--s));cursor:pointer;box-shadow:4px 4px 0 var(--red)}
 .btn:hover{background:var(--white)}
 .btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--red)}
@@ -73,12 +71,9 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
     <canvas id="game" aria-label="Juego arcade: derribá los drones"></canvas>
     <div class="overlay" id="ovStart">
       <h1>DRON<br>INVADERS</h1>
-      <p>Bajá los drones para que Messi esté contento.</p>
-      <div class="table" id="ptsTable">
-        <span class="cap">TABLA DE PUNTOS</span>
-      </div>
-      <p class="hint"><span class="hint-touch">Tocá y arrastrá: dispara solo.</span><span class="hint-mouse">Mouse o ← → para moverte.<br>Click o ESPACIO para disparar.<br>M: música.</span></p>
+      <p>Destruí los drones para que Messi esté contento.</p>
       <button class="btn" id="btnStart">JUGAR</button>
+      <p class="hint"><span class="hint-touch">Tocá y arrastrá: dispara solo.</span><span class="hint-mouse">Mouse o <svg class="key" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> <svg class="key right" viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z"/></svg> para moverte.<br>Click o ESPACIO para disparar.<br>M: música.</span></p>
     </div>
     <button class="sound" id="btnSound" aria-label="Silenciar música" aria-pressed="false" title="Música (M)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3v4H2zM5 5h2v6H5zM7 3h2v10H7z"/><path class="on" d="M11 6h1v4h-1zM13 4h1v8h-1z"/><path class="off" d="M10 5h1v1h-1zM11 6h1v1h-1zM12 7h1v2h-1zM11 9h1v1h-1zM10 10h1v1h-1zM13 6h1v1h-1zM14 5h1v1h-1zM13 9h1v1h-1zM14 10h1v1h-1z"/></svg></button>
     <button class="pause" id="btnPause" aria-label="Pausa" title="Pausa (P o Esc)" hidden><i></i><i></i></button>
@@ -161,15 +156,6 @@ const BOMB=[pix([".w.","www","wyw","wyw",".y.",".r."],{w:'#f4f4f4',y:'#ffd800',r
             pix([".w.","www","wyw","wyw",".r.",".y."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'})];
 const BALL=pix([".www.","wwkww","wkkkw","wwkww",".www."],{w:'#f4f4f4',k:'#111111'});
 const FLAG=pix(["pcccc","pwwyw","pcccc","p....","p...."],{p:'#8a8a96',c:'#6fc3ff',w:'#f4f4f4',y:'#ffd800'});
-
-/* points table on the title screen */
-const tbl=document.getElementById('ptsTable');
-['yellow','purple','red','blue'].forEach(k=>{
-  const c=document.createElement('canvas');c.width=9;c.height=7;c.getContext('2d').drawImage(SPR[k][0],0,0);
-  const p=document.createElement('span');p.className='pts';p.textContent=PTS[k];
-  const d=document.createElement('span');d.className='dive';d.textContent=`${PTS[k]*2} EN PICADA`;
-  tbl.append(c,p,d);
-});
 
 /* ---------- Stadium backdrop: 8-bit, drawn on a 3px pixel grid ---------- */
 const PX=3,LH=Math.ceil(H/PX);
