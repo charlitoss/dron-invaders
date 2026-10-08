@@ -270,21 +270,21 @@ function startWave(){
   drones.forEach(d=>{d.sx=d.x;d.sy=d.y});
   diveTimer=2.5;banner=2;shots=[];bombs=[];
 }
-/* ---------- Music: plays during a game, stops on pause / game over; mute is remembered ---------- */
+/* ---------- Music: loops from the title screen on, stops only in the pause menu / hidden tab; mute is remembered ---------- */
 const music=document.getElementById('music'),btnSound=document.getElementById('btnSound');
 music.volume=.5;
 function setMuted(m){music.muted=m;btnSound.setAttribute('aria-pressed',m);try{localStorage.setItem('drones-muted',m?'1':'0')}catch(e){}}
 function playMusic(restart){if(restart)music.currentTime=0;const p=music.play();if(p)p.catch(()=>{})}
-function stopMusic(rewind){music.pause();if(rewind)music.currentTime=0}
+function stopMusic(){music.pause()}
 try{setMuted(localStorage.getItem('drones-muted')==='1')}catch(e){setMuted(false)}
 
-function newGame(){overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic(true)}
+function newGame(){overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic()}
 function setState(s){state=s;btnPause.hidden=s!=='play'}
 function pause(){if(state!=='play')return;setState('paused');stopMusic();pointerDown=false;for(const k in keys)keys[k]=false;ovPause.hidden=false;document.getElementById('btnResume').focus()}
 function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');playMusic();last=performance.now()}
 function saveBest(){if(score>best){best=score;try{localStorage.setItem('drones-best',best)}catch(e){}}}
 function exitToTitle(){
-  saveBest();stopMusic(true);ovPause.hidden=true;ovOver.hidden=true;
+  saveBest();playMusic();ovPause.hidden=true;ovOver.hidden=true;
   shots=[];bombs=[];parts=[];player.x=W/2;player.alive=true;player.inv=0;
   setState('title');startWave();ovStart.hidden=false;document.getElementById('btnStart').focus();
 }
@@ -322,7 +322,7 @@ function hitPlayer(){
   if(lives<=0)overTimer=1.1;
 }
 function gameOver(){
-  setState('over');saveBest();stopMusic(true);
+  setState('over');saveBest();
   document.getElementById('oScore').textContent=score;
   document.getElementById('oBest').textContent='RECORD '+best;
   ovOver.hidden=false;document.getElementById('btnAgain').focus();
@@ -453,6 +453,12 @@ let last=performance.now();
 const sideways=matchMedia('(orientation:landscape) and (max-height:520px) and (pointer:coarse)');
 function loop(now){const dt=Math.max(0,Math.min(.04,(now-last)/1000));last=now;if(!sideways.matches)update(dt);render();requestAnimationFrame(loop)}
 startWave();drones.forEach(d=>{d.state='form'});state='title';
+// browsers block sound until the visitor interacts: try now, else start on the first click / tap / key
+playMusic();
+const unlock=()=>{if(state!=='paused'&&!document.hidden&&music.paused)playMusic()};
+const unlockEvents=['pointerdown','keydown','touchend'];
+unlockEvents.forEach(t=>addEventListener(t,unlock,true));
+music.addEventListener('playing',()=>unlockEvents.forEach(t=>removeEventListener(t,unlock,true)),{once:true});
 requestAnimationFrame(loop);
 
 /* ---------- Input ---------- */
@@ -476,7 +482,7 @@ btnSound.addEventListener('click',()=>{setMuted(!music.muted);btnSound.blur()});
 document.getElementById('btnResume').addEventListener('click',resume);
 document.getElementById('btnExit').addEventListener('click',exitToTitle);
 // leaving the tab or turning the phone sideways pauses a running game
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();stopMusic()}else if(state!=='paused')playMusic()});
 sideways.addEventListener('change',()=>{if(sideways.matches)pause()});
 document.getElementById('btnAgain').addEventListener('click',()=>{ovOver.hidden=true;newGame()});
 })();
