@@ -142,6 +142,14 @@ const PTS={yellow:150,purple:80,red:60,blue:40};
 const PCOL={yellow:'#ffd800',purple:'#b44cff',red:'#ff2a2a',blue:'#2f8bff'};
 const SHIP=pix([".....w.....",".....w.....","....wcw....","....wcw....",".r..wcw..r.",".r.wwwww.r.",".rwwwywwwr.","wwwwyyywwww","wwccwwwccww","w..cc.cc..w"],
   {w:'#f4f4f4',c:'#6fc3ff',r:'#ff2a2a',y:'#ffd800'});
+// player ship with a 1px black outline so it reads against the stadium backdrop
+function outline(img){const w=img.width,h=img.height,src=img.getContext('2d').getImageData(0,0,w,h).data;
+  const c=document.createElement('canvas');c.width=w+2;c.height=h+2;const x=c.getContext('2d');x.fillStyle='#000';
+  for(let y=-1;y<=h;y++)for(let X=-1;X<=w;X++){let n=false;
+    for(let dy=-1;dy<=1&&!n;dy++)for(let dx=-1;dx<=1;dx++){const u=X+dx,v=y+dy;if(u>=0&&v>=0&&u<w&&v<h&&src[(v*w+u)*4+3]){n=true;break}}
+    if(n)x.fillRect(X+1,y+1,1,1)}
+  x.drawImage(img,1,1);return c}
+const SHIP_OUT=outline(SHIP),SHIP_S=3,SHIP_HW=SHIP_OUT.width*SHIP_S/2;
 const BOMB=[pix([".w.","www","wyw","wyw",".y.",".r."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'}),
             pix([".w.","www","wyw","wyw",".r.",".y."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'})];
 const BALL=pix([".www.","wwkww","wkkkw","wwkww",".www."],{w:'#f4f4f4',k:'#111111'});
@@ -319,10 +327,10 @@ function update(dt){
     let dx=0;if(keys.ArrowLeft||keys.a)dx-=1;if(keys.ArrowRight||keys.d)dx+=1;
     if(dx)player.x+=dx*210*dt;
     else if(pointerX!=null)player.x+=(pointerX-player.x)*Math.min(1,dt*14);
-    player.x=Math.max(14,Math.min(W-14,player.x));
+    player.x=Math.max(SHIP_HW,Math.min(W-SHIP_HW,player.x));
     if(player.inv>0)player.inv-=dt;
     player.cool-=dt;
-    if((keys[' ']||pointerDown)&&player.cool<=0&&shots.length<3){shots.push({x:player.x,y:PY-14});player.cool=.24}
+    if((keys[' ']||pointerDown)&&player.cool<=0&&shots.length<3){shots.push({x:player.x,y:PY-18});player.cool=.24}
   }else if(lives>0){player.dead-=dt;if(player.dead<=0){player.alive=true;player.inv=2;player.x=W/2}}
   shots.forEach(s=>{s.y-=430*dt});shots=shots.filter(s=>s.y>-10);
   diveTimer-=dt;
@@ -342,11 +350,11 @@ function update(dt){
     for(const s of shots){if(!s.gone&&Math.abs(s.x-d.x)<10&&Math.abs(s.y-d.y)<9){s.gone=true;d.dead=true;
       const pts=PTS[d.col]*(d.state==='dive'?2:1);score+=pts;boom(d.x,d.y,PCOL[d.col]);boom(d.x,d.y,'#f4f4f4',5);
       if(d.state==='dive')parts.push({x:d.x,y:d.y,vx:0,vy:-20,life:1,txt:String(pts)});break}}
-    if(!d.dead&&player.alive&&d.state==='dive'&&Math.abs(d.x-player.x)<16&&Math.abs(d.y-PY)<14){d.dead=true;boom(d.x,d.y,PCOL[d.col]);hitPlayer()}
+    if(!d.dead&&player.alive&&d.state==='dive'&&Math.abs(d.x-player.x)<20&&Math.abs(d.y-PY)<17){d.dead=true;boom(d.x,d.y,PCOL[d.col]);hitPlayer()}
   }
   drones=drones.filter(d=>!d.dead);
   shots=shots.filter(s=>!s.gone);
-  bombs.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;if(player.alive&&Math.abs(b.x-player.x)<9&&Math.abs(b.y-PY)<9){b.gone=true;hitPlayer()}});
+  bombs.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;if(player.alive&&Math.abs(b.x-player.x)<12&&Math.abs(b.y-PY)<12){b.gone=true;hitPlayer()}});
   bombs=bombs.filter(b=>!b.gone&&b.y<H+10&&b.x>-10&&b.x<W+10);
   if(!drones.length&&lives>0){wave++;score+=500;startWave()}
   updParts(dt);
@@ -381,7 +389,7 @@ function render(){
   for(const p of parts){if(p.txt){txt(p.txt,p.x,p.y,'#f4f4f4','center');continue}ctx.fillStyle=p.col;ctx.fillRect(R(p.x),R(p.y),2,2)}
   const bf=Math.floor(time*10)%2;for(const b of bombs)spr(BOMB[bf],b.x,b.y,2);
   for(const s of shots)spr(BALL,s.x,s.y);
-  if(player.alive&&!(player.inv>0&&Math.floor(time*12)%2))spr(SHIP,player.x,PY,2);
+  if(player.alive&&!(player.inv>0&&Math.floor(time*12)%2))spr(SHIP_OUT,player.x,PY,SHIP_S);
   // HUD: 1UP · RECORD · VIDAS · NIVEL (no É in the pixel font) — red labels with values underneath
   ctx.textBaseline='top';
   const tw=t=>ctx.measureText(t).width;
@@ -413,7 +421,7 @@ function render(){
 
 function onWidthChange(shift){
   buildScene();
-  player.x=Math.max(14,Math.min(W-14,player.x+shift));
+  player.x=Math.max(SHIP_HW,Math.min(W-SHIP_HW,player.x+shift));
   for(const arr of [shots,bombs,parts])for(const o of arr)o.x+=shift;
   for(const d of drones){d.sx+=shift;if(d.px)d.px=d.px.map(v=>v+shift)}
   if(pointerX!=null)pointerX+=shift;
