@@ -325,7 +325,8 @@ function update(dt){
   if(overTimer>0){overTimer-=dt;if(overTimer<=0){gameOver();return}}
   if(player.alive){
     let dx=0;if(keys.ArrowLeft||keys.a)dx-=1;if(keys.ArrowRight||keys.d)dx+=1;
-    if(dx)player.x+=dx*210*dt;
+    // keys take over from a hovering mouse; it steers again only once it actually moves
+    if(dx){player.x+=dx*210*dt;if(!pointerDown)pointerX=null}
     else if(pointerX!=null)player.x+=(pointerX-player.x)*Math.min(1,dt*14);
     player.x=Math.max(SHIP_HW,Math.min(W-SHIP_HW,player.x));
     if(player.inv>0)player.inv-=dt;
@@ -448,7 +449,7 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{keys[keyName(e)]=false});
 function toGame(e){const r=cv.getBoundingClientRect();return(e.clientX-r.left)/r.width*W}
 cv.addEventListener('pointerdown',e=>{pointerDown=true;pointerX=toGame(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}});
-cv.addEventListener('pointermove',e=>{if(pointerDown||e.pointerType==='mouse')pointerX=toGame(e)});
+cv.addEventListener('pointermove',e=>{if(pointerDown||(e.pointerType==='mouse'&&(e.movementX||e.movementY)))pointerX=toGame(e)});
 const up=()=>{pointerDown=false;if(matchMedia('(pointer:coarse)').matches)pointerX=null};
 cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 cv.addEventListener('pointerleave',()=>{if(!pointerDown)pointerX=null});
