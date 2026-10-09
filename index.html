@@ -22,7 +22,7 @@
 /* Google Analytics 4: set GA_ID to the stream's measurement ID (G-…) to turn it on.
    Off locally, from disk and in cover mode (share images), so only real players are counted. */
 (()=>{
-  const GA_ID='';
+  const GA_ID='G-H7P1P57MRX';
   window.dataLayer=window.dataLayer||[];
   const off=!GA_ID||location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||new URLSearchParams(location.search).has('cover');
   if(off){window.gtag=()=>{};return}
