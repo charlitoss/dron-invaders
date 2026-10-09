@@ -1,4 +1,4 @@
-// Global leaderboard for Dron Invaders, stored in Upstash Redis (add it from the Vercel Marketplace;
+// Global leaderboard for Drone Invaders, stored in Upstash Redis (add it from the Vercel Marketplace;
 // it sets KV_REST_API_URL / KV_REST_API_TOKEN). Talks to Upstash's REST API, so no dependencies.
 //   GET  /api/scores                    -> { top: [{ name, score }] }
 //   POST /api/scores { name, score }    -> { top, rank }   (rank is 1-based, null if outside the kept list)
