@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Dron Invaders: covers</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+/* Social images generator: the live game scene (title-screen formation, menus/HUD hidden) beside the logo.
+   Open as tools/covers.html?w=1200&h=630 over a local server and screenshot at exactly w x h — see tools/covers.sh */
+:root{--black:#000;--red:#ff2a2a;--yellow:#ffd800;--celeste:#6fc3ff;--white:#f4f4f4;--pixel:"Press Start 2P",monospace}
+html,body{margin:0;background:var(--black);overflow:hidden}
+.cover{position:relative;display:flex;overflow:hidden;background:var(--black);font-family:var(--pixel);color:var(--white)}
+.cover.row{flex-direction:row}
+.cover.col{flex-direction:column}
+.brand{flex:1 1 0;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:calc(var(--u)*1.6);padding:calc(var(--u)*2);box-sizing:border-box;line-height:1.5}
+.brand h1{margin:0;font-weight:400;font-size:calc(var(--u)*4.2);line-height:1.3;color:var(--yellow);text-shadow:calc(var(--u)*.45) calc(var(--u)*.45) 0 var(--red)}
+.brand p{margin:0;font-size:calc(var(--u)*1.15);max-width:24ch}
+.brand .cta{font-size:calc(var(--u)*1.5);color:var(--black);background:var(--yellow);padding:calc(var(--u)*1.1) calc(var(--u)*1.8);box-shadow:calc(var(--u)*.5) calc(var(--u)*.5) 0 var(--red)}
+.brand .url{font-size:calc(var(--u)*1);color:var(--celeste)}
+.game{position:relative;overflow:hidden;flex:none;align-self:center;-webkit-mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent)}
+.game iframe{position:absolute;left:0;border:0;display:block}
+</style>
+</head>
+<body>
+<div class="cover" id="cover">
+  <div class="brand">
+    <h1>DRON<br>INVADERS</h1>
+    <p>Destruí los drones para que Messi esté contento.</p>
+    <span class="cta">¡A JUGAR!</span>
+    <span class="url">dron-invaders.vercel.app</span>
+  </div>
+  <div class="game" id="game"><iframe id="frame" title="Dron Invaders"></iframe></div>
+</div>
+<script>
+const q=new URLSearchParams(location.search),w=+q.get('w')||1200,h=+q.get('h')||630;
+const cover=document.getElementById('cover'),game=document.getElementById('game'),frame=document.getElementById('frame');
+cover.style.width=w+'px';cover.style.height=h+'px';
+const HUD=40/640; // share of the game's height taken by the top bar, cropped off
+const wide=w/h>=1.25,header=w/h>=2.5;
+let gw,gh;
+if(wide){gh=h;gw=Math.round(Math.min(h*1.45,w*(header?.5:.56)));cover.classList.add('row')}
+else{gw=w;gh=Math.round(h*(w===h?.5:.6));cover.classList.add('col')}
+// text unit: "INVADERS" is 8 monospace letters at 4.2u (+ padding), and the whole stack is ~29u tall
+// stories: Instagram / WhatsApp draw the progress bar and account name over the top ~11%
+const padT=h/w>1.6?Math.round(h*.11):0;
+const bw=wide?w-gw:w,bh=(wide?h:h-gh)-padT,padL=header?Math.round(w*.12):0;
+cover.style.setProperty('--u',Math.min((bw-padL)/39,bh/29)+'px');
+// headers: keep text clear of the profile picture that sits bottom-left on X / Facebook
+if(header)document.querySelector('.brand').style.paddingLeft=padL+'px';
+if(padT)document.querySelector('.brand').style.paddingTop=padT+'px';
+game.style.width=gw+'px';game.style.height=gh+'px';
+const fh=Math.round(gh/(1-HUD));
+// the playfield is at most 960x640 game px (1.5:1): shrink the box to the game's real width so the side fades land on its edges
+gw=Math.min(gw,Math.floor(fh*1.5));game.style.width=gw+'px';
+frame.style.width=gw+'px';frame.style.height=fh+'px';frame.style.top=-Math.round(fh*HUD)+'px';
+frame.addEventListener('load',()=>{
+  const d=frame.contentDocument;
+  for(const id of ['ovStart','btnSound','btnPause','cameo'])d.getElementById(id)?.setAttribute('hidden','');
+  const m=d.getElementById('music');if(m){m.muted=true;m.pause()}
+});
+frame.src='../index.html';
+</script>
+</body>
+</html>
