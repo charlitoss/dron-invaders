@@ -5,7 +5,7 @@
 <title>Dron Invaders: covers</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
-/* Social images generator: the live game scene (title-screen formation, menus/HUD hidden) beside the logo.
+/* Social images generator: the live game scene in cover mode (index.html?cover: bigger formation and ship, no HUD) beside the logo.
    Open as tools/covers.html?w=1200&h=630 over a local server and screenshot at exactly w x h — see tools/covers.sh */
 :root{--black:#000;--red:#ff2a2a;--yellow:#ffd800;--celeste:#6fc3ff;--white:#f4f4f4;--pixel:"Press Start 2P",monospace}
 html,body{margin:0;background:var(--black);overflow:hidden}
@@ -35,7 +35,7 @@ html,body{margin:0;background:var(--black);overflow:hidden}
 const q=new URLSearchParams(location.search),w=+q.get('w')||1200,h=+q.get('h')||630;
 const cover=document.getElementById('cover'),game=document.getElementById('game'),frame=document.getElementById('frame');
 cover.style.width=w+'px';cover.style.height=h+'px';
-const HUD=40/640; // share of the game's height taken by the top bar, cropped off
+const HUD=0; // the game skips its top bar in cover mode, so nothing to crop
 const wide=w/h>=1.25,header=w/h>=2.5;
 let gw,gh;
 if(wide){gh=h;gw=Math.round(Math.min(h*1.45,w*(header?.5:.56)));cover.classList.add('row')}
@@ -58,7 +58,7 @@ frame.addEventListener('load',()=>{
   for(const id of ['ovStart','btnSound','btnPause','cameo'])d.getElementById(id)?.setAttribute('hidden','');
   const m=d.getElementById('music');if(m){m.muted=true;m.pause()}
 });
-frame.src='../index.html';
+frame.src='../index.html?cover';
 </script>
 </body>
 </html>
