@@ -55,7 +55,7 @@ gw=Math.min(gw,Math.floor(fh*1.5));game.style.width=gw+'px';
 frame.style.width=gw+'px';frame.style.height=fh+'px';frame.style.top=-Math.round(fh*HUD)+'px';
 frame.addEventListener('load',()=>{
   const d=frame.contentDocument;
-  for(const id of ['ovStart','btnSound','btnPause','cameo'])d.getElementById(id)?.setAttribute('hidden','');
+  for(const id of ['ovStart','btnSound','btnPause','cameo','cameo2'])d.getElementById(id)?.setAttribute('hidden','');
   const m=d.getElementById('music');if(m){m.muted=true;m.pause()}
 });
 frame.src='../index.html?cover';
