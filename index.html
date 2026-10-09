@@ -18,6 +18,19 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Drone Invaders: logo arcade y drones en formación sobre el techo del estadio">
 <meta name="twitter:card" content="summary_large_image">
+<script>
+/* Google Analytics 4: set GA_ID to the stream's measurement ID (G-…) to turn it on.
+   Off locally, from disk and in cover mode (share images), so only real players are counted. */
+(()=>{
+  const GA_ID='G-H7P1P57MRX';
+  window.dataLayer=window.dataLayer||[];
+  const off=!GA_ID||location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||new URLSearchParams(location.search).has('cover');
+  if(off){window.gtag=()=>{};return}
+  window.gtag=function(){dataLayer.push(arguments)};
+  const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;document.head.appendChild(s);
+  gtag('js',new Date());gtag('config',GA_ID);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
@@ -309,6 +322,9 @@ function startWave(){
   drones.forEach(d=>{d.sx=d.x;d.sy=d.y});
   diveTimer=2.5;banner=2;shots=[];bombs=[];
 }
+// analytics events (no-op when GA is off)
+const track=(name,params)=>{try{gtag('event',name,params)}catch(e){}};
+
 /* ---------- Music: loops from the title screen on, stops only in the pause menu / hidden tab; mute is remembered ---------- */
 const music=document.getElementById('music'),btnSound=document.getElementById('btnSound');
 music.volume=.5;
@@ -317,7 +333,7 @@ function playMusic(restart){if(restart)music.currentTime=0;const p=music.play();
 function stopMusic(){music.pause()}
 try{setMuted(localStorage.getItem('drones-muted')==='1')}catch(e){setMuted(false)}
 
-function newGame(){loadTop();resetCameo();overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic()}
+function newGame(){loadTop();resetCameo();overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic();track('game_start')}
 function setState(s){state=s;btnPause.hidden=s!=='play';if(s!=='play')cameo.hidden=true}
 
 /* ---------- Cameo: on levels 1-2, a portrait pops in under the top bar for 5 s — 10 s into the game, then every 5 min of play ---------- */
@@ -367,8 +383,9 @@ nameInput.addEventListener('input',()=>{nameInput.value=cleanName(nameInput.valu
 nameForm.addEventListener('submit',e=>{
   e.preventDefault();const name=cleanName(nameInput.value);if(!name||submitted)return;submitted=true;
   try{localStorage.setItem('drones-name',name)}catch(e){}
+  const sc=score,lv=wave;
   api({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score})})
-    .then(d=>{setTop(d.top);fillBoard(topOver,10,d.rank);document.getElementById('oBest').textContent='RECORD '+record()})
+    .then(d=>{track('post_score',{score:sc,level:lv,rank:d.rank});setTop(d.top);fillBoard(topOver,10,d.rank);document.getElementById('oBest').textContent='RECORD '+record()})
     .catch(()=>{})
     .finally(()=>{nameForm.hidden=true;document.getElementById('btnAgain').focus()});
 });
@@ -411,6 +428,7 @@ function hitPlayer(){
   if(lives<=0)overTimer=1.1;
 }
 function gameOver(){
+  track('game_over',{score,level:wave});
   setState('over');saveBest();
   document.getElementById('oScore').textContent=score;
   document.getElementById('oBest').textContent='RECORD '+record();
@@ -462,7 +480,7 @@ function update(dt){
   shots=shots.filter(s=>!s.gone);
   bombs.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;if(player.alive&&Math.abs(b.x-player.x)<12&&Math.abs(b.y-PY)<12){b.gone=true;hitPlayer()}});
   bombs=bombs.filter(b=>!b.gone&&b.y<H+10&&b.x>-10&&b.x<W+10);
-  if(!drones.length&&lives>0){wave++;score+=500;startWave()}
+  if(!drones.length&&lives>0){wave++;score+=500;startWave();track('level_up',{level:wave})}
   updParts(dt);
 }
 function updParts(dt){parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;if(!p.txt){p.vy+=60*dt;p.vx*=.97}p.life-=dt});parts=parts.filter(p=>p.life>0)}
@@ -562,7 +580,7 @@ const keyName=e=>map[e.key]||(e.key.length===1?e.key.toLowerCase():e.key);
 addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
   if((e.key==='Escape'||e.key==='p'||e.key==='P')&&!e.repeat){if(state==='play'){pause();e.preventDefault();return}if(state==='paused'){resume();e.preventDefault();return}}
-  if((e.key==='m'||e.key==='M')&&!e.repeat){setMuted(!music.muted);return}
+  if((e.key==='m'||e.key==='M')&&!e.repeat){setMuted(!music.muted);track('music_toggle',{muted:music.muted});return}
   if(e.target.tagName==='BUTTON'&&e.key===' ')return;keys[keyName(e)]=true;if([' ','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault()});
 addEventListener('keyup',e=>{keys[keyName(e)]=false});
 function toGame(e){const r=cv.getBoundingClientRect();return(e.clientX-r.left)/r.width*W}
@@ -575,7 +593,7 @@ cv.addEventListener('pointerleave',()=>{if(!pointerDown)pointerX=null});
 document.getElementById('btnStart').addEventListener('click',()=>{ovStart.hidden=true;newGame()});
 loadTop();
 btnPause.addEventListener('click',pause);
-btnSound.addEventListener('click',()=>{setMuted(!music.muted);btnSound.blur()});
+btnSound.addEventListener('click',()=>{setMuted(!music.muted);track('music_toggle',{muted:music.muted});btnSound.blur()});
 document.getElementById('btnResume').addEventListener('click',resume);
 document.getElementById('btnExit').addEventListener('click',exitToTitle);
 // leaving the tab or turning the phone sideways pauses a running game
