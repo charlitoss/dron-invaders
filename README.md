@@ -1,4 +1,4 @@
-# Dron Invaders
+# Drone Invaders
 
 Shooter arcade estilo años 80: bajá los drones que forman una figura sobre el techo del estadio.
 
