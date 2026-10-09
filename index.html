@@ -123,6 +123,7 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
     </div>
     <button class="sound" id="btnSound" aria-label="Silenciar música" aria-pressed="false" title="Música (M)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3v4H2zM5 5h2v6H5zM7 3h2v10H7z"/><path class="on" d="M11 6h1v4h-1zM13 4h1v8h-1z"/><path class="off" d="M10 5h1v1h-1zM11 6h1v1h-1zM12 7h1v2h-1zM11 9h1v1h-1zM10 10h1v1h-1zM13 6h1v1h-1zM14 5h1v1h-1zM13 9h1v1h-1zM14 10h1v1h-1z"/></svg></button>
     <img class="cameo" id="cameo" src="img/cameo.gif" alt="" hidden>
+    <img class="cameo" id="cameo2" src="img/cameo2.gif" alt="" hidden>
     <button class="pause" id="btnPause" aria-label="Pausa" title="Pausa (P o Esc)" hidden><i></i><i></i></button>
     <div class="overlay" id="ovPause" hidden>
       <h1>PAUSA</h1>
@@ -334,21 +335,28 @@ function stopMusic(){music.pause()}
 try{setMuted(localStorage.getItem('drones-muted')==='1')}catch(e){setMuted(false)}
 
 function newGame(){loadTop();resetCameo();overTimer=0;score=0;wave=1;lives=3;player.x=W/2;player.alive=true;player.inv=0;parts=[];startWave();setState('play');playMusic();track('game_start')}
-function setState(s){state=s;btnPause.hidden=s!=='play';if(s!=='play')cameo.hidden=true}
+function setState(s){state=s;btnPause.hidden=s!=='play';if(s!=='play')for(const c of CAMEOS)c.el.hidden=true}
 
-/* ---------- Cameo: on levels 1-2, a portrait pops in under the top bar for 5 s — 10 s into the game, then every 5 min of play ---------- */
-const cameo=document.getElementById('cameo');
-const CAMEO_FIRST=10,CAMEO_EVERY=300,CAMEO_SHOW=5,CAMEO_MAX_WAVE=2;
-let cameoClock=0,cameoNext=CAMEO_FIRST,cameoLeft=0;
-function resetCameo(){cameoClock=0;cameoNext=CAMEO_FIRST;cameoLeft=0;cameo.hidden=true}
+/* ---------- Cameos: portraits pop in under the top bar for 5 s, on a play-time schedule (paused time doesn't count) ---------- */
+// first: seconds into the game; every: repeat interval; maxWave: last level it may appear on
+const CAMEO_SHOW=5;
+const CAMEOS=[
+  {el:document.getElementById('cameo'),first:10,every:300,maxWave:2},
+  {el:document.getElementById('cameo2'),first:40,every:300,maxWave:Infinity},
+];
+let cameoClock=0;
+function resetCameo(){cameoClock=0;for(const c of CAMEOS){c.next=c.first;c.left=0;c.el.hidden=true}}
 function updCameo(dt){
   cameoClock+=dt;
-  if(cameoClock>=cameoNext){cameoNext+=CAMEO_EVERY;if(wave<=CAMEO_MAX_WAVE)cameoLeft=CAMEO_SHOW}
-  if(cameoLeft>0){cameoLeft-=dt;if(wave>CAMEO_MAX_WAVE)cameoLeft=0}
-  cameo.hidden=!(cameoLeft>0);
+  for(const c of CAMEOS){
+    if(cameoClock>=c.next){c.next+=c.every;if(wave<=c.maxWave)c.left=CAMEO_SHOW}
+    if(c.left>0){c.left-=dt;if(wave>c.maxWave)c.left=0}
+    c.el.hidden=!(c.left>0);
+  }
 }
+resetCameo();
 function pause(){if(state!=='play')return;setState('paused');stopMusic();pointerDown=false;for(const k in keys)keys[k]=false;ovPause.hidden=false;document.getElementById('btnResume').focus()}
-function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');cameo.hidden=!(cameoLeft>0);playMusic();last=performance.now()}
+function resume(){if(state!=='paused')return;ovPause.hidden=true;setState('play');for(const c of CAMEOS)c.el.hidden=!(c.left>0);playMusic();last=performance.now()}
 function saveBest(){if(score>best){best=score;try{localStorage.setItem('drones-best',best)}catch(e){}}}
 
 /* ---------- Leaderboard (api/scores.js on Vercel); without it the game falls back to the local record ---------- */
