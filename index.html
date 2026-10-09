@@ -75,7 +75,7 @@ canvas{display:block;touch-action:none;cursor:crosshair;image-rendering:pixelate
 .sound svg{width:calc(16px*var(--s));height:calc(16px*var(--s));fill:var(--celeste);shape-rendering:crispEdges}
 .sound .off,.sound[aria-pressed="true"] .on{display:none}
 .sound[aria-pressed="true"] .off{display:inline}
-.cameo{position:absolute;z-index:1;top:calc(46px*var(--s));right:calc(8px*var(--s));width:calc(72px*var(--s));height:calc(72px*var(--s));border:2px solid var(--yellow);box-shadow:3px 3px 0 var(--red);image-rendering:pixelated;pointer-events:none}
+.cameo{box-sizing:border-box;position:absolute;z-index:1;top:calc(46px*var(--s));right:calc(8px*var(--s));width:min(200px,55%);aspect-ratio:4/5;height:auto;object-fit:cover;border:2px solid var(--yellow);box-shadow:3px 3px 0 var(--red);image-rendering:pixelated;pointer-events:none}
 .score-big{font-size:calc(28px*var(--s));color:var(--white);line-height:1;font-variant-numeric:tabular-nums}
 </style>
 </head>
