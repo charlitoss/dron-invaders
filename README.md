@@ -5,6 +5,19 @@ Shooter arcade estilo años 80: bajá los drones que forman una figura sobre el 
 - Un solo archivo estático: `index.html` (HTML, CSS y JS sin dependencias de build).
 - Controles: tocá y arrastrá en el celular (dispara solo), o ← → y Espacio en el teclado.
 
+## Power-ups
+
+Algunos drones derribados sueltan una cápsula (más seguido si estaban en picada). Atrapala con la nave:
+
+| Cápsula | Efecto | Duración |
+|---|---|---|
+| **R** amarilla | Tiro rápido: dispara el doble de rápido y con más pelotas en el aire | 10 s |
+| **T** violeta | Tiro triple: tres pelotas en abanico | 10 s |
+| **E** celeste | Escudo: absorbe un golpe | 15 s o hasta el golpe |
+| **+** roja | Vida extra (máximo 5) | — |
+
+Los power-ups activos se ven abajo a la izquierda con su tiempo restante. Se combinan entre sí y se pierden al perder una vida.
+
 ## Deploy en Vercel
 
 Importá el repo en Vercel con el preset **Other**, sin build command ni output directory. Vercel sirve `index.html` desde la raíz.
