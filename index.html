@@ -209,8 +209,9 @@ function outline(img){const w=img.width,h=img.height,src=img.getContext('2d').ge
     if(n)x.fillRect(X+1,y+1,1,1)}
   x.drawImage(img,1,1);return c}
 const SHIP_OUT=outline(SHIP),SHIP_S=3,SHIP_HW=SHIP_OUT.width*SHIP_S/2;
-const BOMB=[pix([".w.","www","wyw","wyw",".y.",".r."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'}),
-            pix([".w.","www","wyw","wyw",".r.",".y."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'})];
+// enemy rockets fly nose down, flame trailing on top
+const BOMB=[pix([".r.",".y.","wyw","wyw","www",".w."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'}),
+            pix([".y.",".r.","wyw","wyw","www",".w."],{w:'#f4f4f4',y:'#ffd800',r:'#ff2a2a'})];
 const BALL=pix([".www.","wwkww","wkkkw","wwkww",".www."],{w:'#f4f4f4',k:'#111111'});
 const FLAG=pix(["pcccc","pwwyw","pcccc","p....","p...."],{p:'#8a8a96',c:'#6fc3ff',w:'#f4f4f4',y:'#ffd800'});
 
