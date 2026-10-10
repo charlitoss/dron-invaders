@@ -13,6 +13,7 @@ Algunos drones derribados sueltan una cápsula (más seguido si estaban en picad
 |---|---|---|
 | **R** amarilla | Tiro rápido: dispara el doble de rápido y con más pelotas en el aire | 10 s |
 | **T** violeta | Tiro triple: tres pelotas en abanico | 10 s |
+| **L** verde | Cámara lenta: drones y bombas van más despacio (la nave y tus tiros no) | 8 s |
 | **E** celeste | Escudo: absorbe un golpe | 15 s o hasta el golpe |
 | **+** roja | Vida extra (máximo 5) | — |
 
